@@ -175,7 +175,7 @@ class OdooService {
       const products = await this.jsonRpcCall('/web/dataset/call_kw', {
         model: 'product.product',
         method: 'read',
-        args: [productIds, ['name', 'default_code', 'barcode', 'qty_available', 'uom_id', 'categ_id']],
+        args: [productIds, ['name', 'default_code', 'barcode', 'qty_available', 'uom_id', 'categ_id', 'image_1920']],
         kwargs: {}
       });
 
@@ -187,7 +187,8 @@ class OdooService {
         qty_available: product.qty_available || 0,
         uom_name: product.uom_id ? product.uom_id[1] : 'Unit',
         categ_id: product.categ_id ? product.categ_id[0] : 0,
-        categ_name: product.categ_id ? product.categ_id[1] : 'No Category'
+        categ_name: product.categ_id ? product.categ_id[1] : 'No Category',
+        image_url: product.image_1920 ? `data:image/png;base64,${product.image_1920}` : undefined
       }));
     } catch (error) {
       console.error('Error searching products:', error);
@@ -208,21 +209,48 @@ class OdooService {
   // Inventory operations
   async createInventoryLine(inventoryLine: Omit<InventoryLine, 'id'>): Promise<InventoryLine> {
     try {
-      const lineId = await this.jsonRpcCall('/web/dataset/call_kw', {
-        model: 'stock.inventory.line',
-        method: 'create',
-        args: [{
-          product_id: inventoryLine.product_id,
-          theoretical_qty: inventoryLine.theoretical_qty,
-          product_qty: inventoryLine.product_qty,
-          location_id: inventoryLine.location_id
-        }],
-        kwargs: {}
+      // Search for existing quant
+      const quantIds = await this.jsonRpcCall('/web/dataset/call_kw', {
+        model: 'stock.quant',
+        method: 'search',
+        args: [[
+          ['product_id', '=', inventoryLine.product_id],
+          ['location_id', '=', inventoryLine.location_id]
+        ]],
+        kwargs: { limit: 1 }
       });
+
+      let quantId;
+      if (quantIds.length > 0) {
+        // Update existing quant
+        quantId = quantIds[0];
+        await this.jsonRpcCall('/web/dataset/call_kw', {
+          model: 'stock.quant',
+          method: 'write',
+          args: [[quantId], {
+            quantity: inventoryLine.product_qty,
+            inventory_quantity: inventoryLine.product_qty
+          }],
+          kwargs: {}
+        });
+      } else {
+        // Create new quant
+        quantId = await this.jsonRpcCall('/web/dataset/call_kw', {
+          model: 'stock.quant',
+          method: 'create',
+          args: [{
+            product_id: inventoryLine.product_id,
+            location_id: inventoryLine.location_id,
+            quantity: inventoryLine.product_qty,
+            inventory_quantity: inventoryLine.product_qty
+          }],
+          kwargs: {}
+        });
+      }
 
       return {
         ...inventoryLine,
-        id: lineId
+        id: quantId
       };
     } catch (error) {
       console.error('Error creating inventory line:', error);
@@ -232,12 +260,21 @@ class OdooService {
 
   async updateInventoryLine(id: number, updates: Partial<InventoryLine>): Promise<void> {
     try {
-      await this.jsonRpcCall('/web/dataset/call_kw', {
-        model: 'stock.inventory.line',
-        method: 'write',
-        args: [[id], updates],
-        kwargs: {}
-      });
+      const quantUpdates: any = {};
+      
+      if (updates.product_qty !== undefined) {
+        quantUpdates.quantity = updates.product_qty;
+        quantUpdates.inventory_quantity = updates.product_qty;
+      }
+
+      if (Object.keys(quantUpdates).length > 0) {
+        await this.jsonRpcCall('/web/dataset/call_kw', {
+          model: 'stock.quant',
+          method: 'write',
+          args: [[id], quantUpdates],
+          kwargs: {}
+        });
+      }
     } catch (error) {
       console.error('Error updating inventory line:', error);
       throw error;

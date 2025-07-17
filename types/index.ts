@@ -16,6 +16,7 @@ export interface Product {
   uom_name: string;
   categ_id: number;
   categ_name: string;
+  image_url?: string;
 }
 
 export interface InventoryLine {

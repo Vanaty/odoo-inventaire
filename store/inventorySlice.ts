@@ -1,6 +1,6 @@
-import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import { InventoryState, Product, InventoryLine } from '@/types';
 import { odooService } from '@/services/odoo';
+import { InventoryLine, InventoryState } from '@/types';
+import { createAsyncThunk, createSlice, PayloadAction } from '@reduxjs/toolkit';
 
 const initialState: InventoryState = {
   products: [],

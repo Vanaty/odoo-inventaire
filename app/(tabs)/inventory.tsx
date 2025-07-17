@@ -3,16 +3,16 @@ import { useAppSelector as useSelector } from '@/hooks/useAppSelector';
 import {
   addInventoryLine,
   loadLocations,
-  removeInventoryLine,
   searchProducts,
   setCurrentLocation
 } from '@/store/inventorySlice';
-import { InventoryLine, Product } from '@/types';
+import { Product } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
-import React, { useEffect, useState } from 'react';
+import React, { memo, useCallback, useEffect, useState } from 'react';
 import {
   Alert,
   FlatList,
+  Image,
   Modal,
   StyleSheet,
   Text,
@@ -20,6 +20,56 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+
+
+// Memoized ProductItem component
+const ProductItem = memo(({ item, onPress }: { item: Product; onPress: (product: Product) => void }) => (
+  <TouchableOpacity
+    style={styles.productCard}
+    onPress={() => onPress(item)}
+    activeOpacity={0.7}
+  >
+    <View style={styles.productCardContent}>
+      <View style={styles.productImageContainer}>
+        {item.image_url ? (
+          <Image
+            source={{ uri: item.image_url }}
+            style={styles.productImage}
+            resizeMode="cover"
+          />
+        ) : (
+          <View style={styles.productImagePlaceholder}>
+            <Ionicons name="cube-outline" size={32} color="#9CA3AF" />
+          </View>
+        )}
+      </View>
+      
+      <View style={styles.productInfo}>
+        <Text style={styles.productName} numberOfLines={2}>{item.name}</Text>
+        <View style={styles.productDetails}>
+          <View style={styles.productCodeContainer}>
+            <Ionicons name="pricetag-outline" size={14} color="#6B7280" />
+            <Text style={styles.productCode}>{item.default_code || 'N/A'}</Text>
+          </View>
+          <View style={styles.productQtyContainer}>
+            <Ionicons name="layers-outline" size={14} color="#10B981" />
+            <Text style={styles.productQty}>{item.qty_available} {item.uom_name}</Text>
+          </View>
+        </View>
+        {item.barcode && (
+          <View style={styles.barcodeContainer}>
+            <Ionicons name="barcode-outline" size={12} color="#9CA3AF" />
+            <Text style={styles.productBarcode}>{item.barcode}</Text>
+          </View>
+        )}
+      </View>
+      
+      <View style={styles.addButton}>
+        <Ionicons name="add-circle-outline" size={24} color="#3B82F6" />
+      </View>
+    </View>
+  </TouchableOpacity>
+));
 
 export default function InventoryScreen() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -30,7 +80,7 @@ export default function InventoryScreen() {
   const [showLocationModal, setShowLocationModal] = useState(false);
 
   const dispatch = useAppDispatch();
-  const { products, inventoryLines, currentLocation, loading, error } = useSelector(state => state.inventory);
+  const { products, currentLocation, loading, error } = useSelector(state => state.inventory);
   const { isAuthenticated } = useSelector(state => state.auth);
 
   useEffect(() => {
@@ -39,6 +89,21 @@ export default function InventoryScreen() {
       loadLocationData();
     }
   }, [isAuthenticated]);
+
+  // Auto-load products on app start
+  useEffect(() => {
+    const autoLoadProducts = async () => {
+      if (isAuthenticated) {
+        try {
+          await dispatch(searchProducts('')).unwrap();
+        } catch (error) {
+          console.log('Auto-load products failed:', error);
+        }
+      }
+    };
+
+    autoLoadProducts();
+  }, [dispatch, isAuthenticated]);
 
   const loadLocationData = async () => {
     try {
@@ -87,69 +152,33 @@ export default function InventoryScreen() {
     }
   };
 
-  const handleRemoveFromInventory = (lineId: number) => {
-    Alert.alert(
-      'Confirmer la suppression',
-      'Êtes-vous sûr de vouloir supprimer cette ligne d\'inventaire ?',
-      [
-        { text: 'Annuler', style: 'cancel' },
-        { text: 'Supprimer', style: 'destructive', onPress: () => dispatch(removeInventoryLine(lineId)) },
-      ]
-    );
-  };
+  const handleProductPress = useCallback((product: Product) => {
+    setSelectedProduct(product);
+    setShowAddModal(true);
+  }, []);
 
-  const renderProductItem = ({ item }: { item: Product }) => (
-    <TouchableOpacity
-      style={styles.productItem}
-      onPress={() => {
-        setSelectedProduct(item);
-        setShowAddModal(true);
-      }}
-    >
-      <View style={styles.productHeader}>
-        <Text style={styles.productName}>{item.name}</Text>
-        <View style={styles.productInfo}>
-          <Text style={styles.productCode}>{item.default_code}</Text>
-          <Text style={styles.productQty}>{item.qty_available} {item.uom_name}</Text>
-        </View>
-      </View>
-      {item.barcode && (
-        <Text style={styles.productBarcode}>Code-barres: {item.barcode}</Text>
-      )}
-    </TouchableOpacity>
-  );
+  const renderProductItem = useCallback(({ item }: { item: Product }) => (
+    <ProductItem item={item} onPress={handleProductPress} />
+  ), [handleProductPress]);
 
-  const renderInventoryLine = ({ item }: { item: InventoryLine }) => (
-    <View style={styles.inventoryLine}>
-      <View style={styles.inventoryHeader}>
-        <Text style={styles.inventoryProductName}>{item.product_name}</Text>
-        <TouchableOpacity
-          style={styles.removeButton}
-          onPress={() => item.id && handleRemoveFromInventory(item.id)}
-        >
-          <Ionicons name="trash-outline" size={16} color="#DC2626" />
-        </TouchableOpacity>
-      </View>
-      <View style={styles.inventoryDetails}>
-        <Text style={styles.inventoryQty}>
-          Théorique: {item.theoretical_qty} | Réel: {item.product_qty}
-        </Text>
-        <Text style={[
-          styles.inventoryDiff,
-          { color: item.difference_qty >= 0 ? '#10B981' : '#DC2626' }
-        ]}>
-          Écart: {item.difference_qty > 0 ? '+' : ''}{item.difference_qty}
-        </Text>
-      </View>
-    </View>
-  );
+  const keyExtractor = useCallback((item: Product) => item.id.toString(), []);
+
+  const getItemLayout = useCallback((data: any, index: number) => ({
+    length: 116,
+    offset: 128 * index,
+    index,
+  }), []);
 
   if (!isAuthenticated) {
     return (
       <View style={styles.container}>
-        <Text style={styles.notAuthenticatedText}>
-          Veuillez vous connecter pour accéder à l'inventaire
-        </Text>
+        <View style={styles.emptyState}>
+          <Ionicons name="lock-closed-outline" size={64} color="#9CA3AF" />
+          <Text style={styles.emptyStateTitle}>Connexion requise</Text>
+          <Text style={styles.emptyStateText}>
+            Veuillez vous connecter pour accéder à l'inventaire
+          </Text>
+        </View>
       </View>
     );
   }
@@ -157,16 +186,19 @@ export default function InventoryScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Inventaire</Text>
-        <TouchableOpacity
-          style={styles.locationButton}
-          onPress={() => setShowLocationModal(true)}
-        >
-          <Ionicons name="location-outline" size={16} color="#3B82F6" />
-          <Text style={styles.locationText}>
-            {currentLocation?.name || 'Sélectionner un emplacement'}
-          </Text>
-        </TouchableOpacity>
+        <View style={styles.headerContent}>
+          <Text style={styles.title}>📦 Inventaire</Text>
+          <TouchableOpacity
+            style={styles.locationButton}
+            onPress={() => setShowLocationModal(true)}
+          >
+            <Ionicons name="location" size={16} color="#3B82F6" />
+            <Text style={styles.locationText}>
+              {currentLocation?.name || 'Sélectionner'}
+            </Text>
+            <Ionicons name="chevron-down" size={16} color="#3B82F6" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <View style={styles.searchContainer}>
@@ -178,33 +210,62 @@ export default function InventoryScreen() {
             value={searchTerm}
             onChangeText={setSearchTerm}
             onSubmitEditing={handleSearch}
+            placeholderTextColor="#9CA3AF"
           />
+          {searchTerm.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchTerm('')}>
+              <Ionicons name="close-circle" size={20} color="#9CA3AF" />
+            </TouchableOpacity>
+          )}
         </View>
         <TouchableOpacity style={styles.searchButton} onPress={handleSearch}>
           <Ionicons name="search-outline" size={20} color="white" />
         </TouchableOpacity>
       </View>
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Produits disponibles</Text>
-        <FlatList
-          data={products}
-          renderItem={renderProductItem}
-          keyExtractor={item => item.id.toString()}
-          style={styles.productList}
-          showsVerticalScrollIndicator={false}
-        />
-      </View>
+      <View style={styles.content}>
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>🛍️ Catalogue de produits</Text>
+            <View style={styles.productCount}>
+              <Text style={styles.productCountText}>{products.length}</Text>
+            </View>
+          </View>
+          
+          {loading && (
+            <View style={styles.loadingContainer}>
+              <Ionicons name="refresh" size={24} color="#3B82F6" />
+              <Text style={styles.loadingText}>Chargement des produits...</Text>
+            </View>
+          )}
 
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Lignes d'inventaire ({inventoryLines.length})</Text>
-        <FlatList
-          data={inventoryLines}
-          renderItem={renderInventoryLine}
-          keyExtractor={item => item.id?.toString() || Math.random().toString()}
-          style={styles.inventoryList}
-          showsVerticalScrollIndicator={false}
-        />
+          {!loading && products.length === 0 ? (
+            <View style={styles.emptyProducts}>
+              <Ionicons name="cube-outline" size={64} color="#9CA3AF" />
+              <Text style={styles.emptyText}>Aucun produit trouvé</Text>
+              <Text style={styles.emptySubtext}>Essayez de modifier votre recherche</Text>
+            </View>
+          ) : (
+            <FlatList
+              data={products}
+              renderItem={renderProductItem}
+              keyExtractor={keyExtractor}
+              getItemLayout={getItemLayout}
+              style={styles.productList}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.productListContent}
+              ItemSeparatorComponent={() => <View style={styles.itemSeparator} />}
+              numColumns={1}
+              refreshing={loading}
+              onRefresh={() => dispatch(searchProducts(searchTerm))}
+              removeClippedSubviews={true}
+              maxToRenderPerBatch={10}
+              windowSize={21}
+              initialNumToRender={10}
+              updateCellsBatchingPeriod={50}
+            />
+          )}
+        </View>
       </View>
 
       {/* Add Product Modal */}
@@ -216,24 +277,55 @@ export default function InventoryScreen() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Ajouter au inventaire</Text>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>➕ Ajouter à l'inventaire</Text>
+              <TouchableOpacity onPress={() => setShowAddModal(false)}>
+                <Ionicons name="close" size={24} color="#6B7280" />
+              </TouchableOpacity>
+            </View>
             
             {selectedProduct && (
               <>
-                <Text style={styles.modalProductName}>{selectedProduct.name}</Text>
-                <Text style={styles.modalProductInfo}>
-                  Stock actuel: {selectedProduct.qty_available} {selectedProduct.uom_name}
-                </Text>
+                <View style={styles.modalProductContainer}>
+                  {selectedProduct.image_url ? (
+                    <Image
+                      source={{ uri: selectedProduct.image_url }}
+                      style={styles.modalProductImage}
+                      resizeMode="contain"
+                    />
+                  ) : (
+                    <View style={styles.modalProductImagePlaceholder}>
+                      <Ionicons name="cube-outline" size={40} color="#9CA3AF" />
+                    </View>
+                  )}
+                  <View style={styles.modalProductDetails}>
+                    <Text style={styles.modalProductName}>{selectedProduct.name}</Text>
+                    <View style={styles.modalProductMeta}>
+                      <Text style={styles.modalProductInfo}>
+                        📦 Stock: {selectedProduct.qty_available} {selectedProduct.uom_name}
+                      </Text>
+                      {selectedProduct.default_code && (
+                        <Text style={styles.modalProductInfo}>
+                          🏷️ Code: {selectedProduct.default_code}
+                        </Text>
+                      )}
+                    </View>
+                  </View>
+                </View>
                 
                 <View style={styles.modalInputContainer}>
-                  <Text style={styles.modalLabel}>Quantité réelle:</Text>
-                  <TextInput
-                    style={styles.modalInput}
-                    value={quantity}
-                    onChangeText={setQuantity}
-                    keyboardType="numeric"
-                    placeholder="0"
-                  />
+                  <Text style={styles.modalLabel}>Quantité comptée</Text>
+                  <View style={styles.modalInputWrapper}>
+                    <TextInput
+                      style={styles.modalInput}
+                      value={quantity}
+                      onChangeText={setQuantity}
+                      keyboardType="numeric"
+                      placeholder="0"
+                      placeholderTextColor="#9CA3AF"
+                    />
+                    <Text style={styles.modalInputUnit}>{selectedProduct.uom_name}</Text>
+                  </View>
                 </View>
 
                 <View style={styles.modalButtons}>
@@ -244,9 +336,11 @@ export default function InventoryScreen() {
                     <Text style={styles.modalCancelText}>Annuler</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={styles.modalAddButton}
+                    style={[styles.modalAddButton, !quantity && styles.modalButtonDisabled]}
                     onPress={handleAddToInventory}
+                    disabled={!quantity}
                   >
+                    <Ionicons name="checkmark" size={20} color="white" />
                     <Text style={styles.modalAddText}>Ajouter</Text>
                   </TouchableOpacity>
                 </View>
@@ -265,7 +359,12 @@ export default function InventoryScreen() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Sélectionner un emplacement</Text>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>📍 Sélectionner un emplacement</Text>
+              <TouchableOpacity onPress={() => setShowLocationModal(false)}>
+                <Ionicons name="close" size={24} color="#6B7280" />
+              </TouchableOpacity>
+            </View>
             
             <FlatList
               data={locations}
@@ -280,23 +379,22 @@ export default function InventoryScreen() {
                     setShowLocationModal(false);
                   }}
                 >
-                  <Text style={[
-                    styles.locationItemText,
-                    currentLocation?.id === item.id && styles.selectedLocationText
-                  ]}>
-                    {item.name}
-                  </Text>
+                  <View style={styles.locationItemContent}>
+                    <Text style={[
+                      styles.locationItemText,
+                      currentLocation?.id === item.id && styles.selectedLocationText
+                    ]}>
+                      {item.name}
+                    </Text>
+                    {currentLocation?.id === item.id && (
+                      <Ionicons name="checkmark-circle" size={20} color="#3B82F6" />
+                    )}
+                  </View>
                 </TouchableOpacity>
               )}
               keyExtractor={item => item.id.toString()}
+              showsVerticalScrollIndicator={false}
             />
-
-            <TouchableOpacity
-              style={styles.modalCancelButton}
-              onPress={() => setShowLocationModal(false)}
-            >
-              <Text style={styles.modalCancelText}>Fermer</Text>
-            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -307,20 +405,30 @@ export default function InventoryScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
-    paddingTop: 60,
+    backgroundColor: '#F8FAFC',
   },
   header: {
+    backgroundColor: 'white',
+    paddingTop: 60,
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  headerContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingBottom: 16,
   },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#1F2937',
+    color: '#1E293B',
   },
   locationButton: {
     flexDirection: 'row',
@@ -328,163 +436,324 @@ const styles = StyleSheet.create({
     backgroundColor: '#EBF8FF',
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
   },
   locationText: {
-    marginLeft: 4,
+    marginHorizontal: 6,
     color: '#3B82F6',
     fontSize: 14,
     fontWeight: '600',
   },
   searchContainer: {
     flexDirection: 'row',
-    paddingHorizontal: 16,
-    marginBottom: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: 'white',
   },
   searchInputContainer: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'white',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    marginRight: 8,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    marginRight: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#E2E8F0',
   },
   searchInput: {
     flex: 1,
     paddingVertical: 12,
     paddingLeft: 8,
     fontSize: 16,
-    color: '#1F2937',
+    color: '#1E293B',
   },
   searchButton: {
     backgroundColor: '#3B82F6',
-    borderRadius: 8,
-    paddingHorizontal: 16,
+    borderRadius: 12,
+    paddingHorizontal: 20,
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#3B82F6',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: 20,
   },
   section: {
     flex: 1,
-    paddingHorizontal: 16,
+    marginVertical: 12,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 16,
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1E293B',
+  },
+  productCount: {
+    backgroundColor: '#3B82F6',
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+  },
+  productCountText: {
+    color: 'white',
+    fontSize: 14,
     fontWeight: '600',
-    color: '#1F2937',
-    marginBottom: 12,
+  },
+  inventoryCount: {
+    backgroundColor: '#10B981',
+    borderRadius: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+  },
+  inventoryCountText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
   },
   productList: {
-    maxHeight: 200,
-  },
-  productItem: {
-    backgroundColor: 'white',
-    borderRadius: 8,
-    padding: 16,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  productHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 8,
-  },
-  productName: {
     flex: 1,
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1F2937',
+  },
+  productListContent: {
+    paddingBottom: 20,
+  },
+  productCard: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+  },
+  productCardContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  productImageContainer: {
+    marginRight: 16,
+  },
+  productImage: {
+    width: 64,
+    height: 64,
+    borderRadius: 12,
+    backgroundColor: '#F8FAFC',
+  },
+  productImagePlaceholder: {
+    width: 64,
+    height: 64,
+    borderRadius: 12,
+    backgroundColor: '#F1F5F9',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   productInfo: {
-    alignItems: 'flex-end',
+    flex: 1,
+  },
+  productName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1E293B',
+    marginBottom: 8,
+  },
+  productDetails: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
+  productCodeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   productCode: {
     fontSize: 14,
-    color: '#6B7280',
+    color: '#64748B',
+    marginLeft: 4,
+  },
+  productQtyContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   productQty: {
     fontSize: 14,
     color: '#10B981',
     fontWeight: '600',
+    marginLeft: 4,
+  },
+  barcodeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   productBarcode: {
     fontSize: 12,
-    color: '#9CA3AF',
-    fontStyle: 'italic',
+    color: '#94A3B8',
+    fontFamily: 'monospace',
+    marginLeft: 4,
   },
-  inventoryList: {
-    flex: 1,
+  addButton: {
+    marginLeft: 12,
   },
-  inventoryLine: {
-    backgroundColor: 'white',
-    borderRadius: 8,
-    padding: 16,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  inventoryHeader: {
+  loadingContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 20,
+  },
+  loadingText: {
+    marginLeft: 8,
+    fontSize: 16,
+    color: '#64748B',
+  },
+  quickActionsContainer: {
+    paddingVertical: 20,
+  },
+  quickActionCard: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 20,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+  },
+  quickActionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1E293B',
+    marginTop: 8,
+  },
+  quickActionText: {
+    fontSize: 14,
+    color: '#64748B',
+    textAlign: 'center',
+    marginTop: 4,
+  },
+  itemSeparator: {
+    height: 12,
+  },
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 40,
+  },
+  emptyStateTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#1E293B',
+    marginTop: 16,
     marginBottom: 8,
   },
-  inventoryProductName: {
-    flex: 1,
+  emptyStateText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#1F2937',
+    color: '#64748B',
+    textAlign: 'center',
+    lineHeight: 24,
   },
-  removeButton: {
-    padding: 4,
+  emptyProducts: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
   },
-  inventoryDetails: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  emptyInventory: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
   },
-  inventoryQty: {
+  emptyText: {
+    fontSize: 16,
+    color: '#64748B',
+    marginTop: 12,
+    fontWeight: '500',
+  },
+  emptySubtext: {
     fontSize: 14,
-    color: '#6B7280',
-  },
-  inventoryDiff: {
-    fontSize: 14,
-    fontWeight: '600',
+    color: '#94A3B8',
+    marginTop: 4,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(0,0,0,0.6)',
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: 20,
   },
   modalContent: {
     backgroundColor: 'white',
-    borderRadius: 12,
+    borderRadius: 20,
     padding: 24,
-    width: '90%',
+    width: '100%',
     maxWidth: 400,
+    maxHeight: '80%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 24,
   },
   modalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#1F2937',
-    marginBottom: 16,
-    textAlign: 'center',
+    color: '#1E293B',
+  },
+  modalProductContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 24,
+  },
+  modalProductImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 12,
+    backgroundColor: 'white',
+  },
+  modalProductImagePlaceholder: {
+    width: 80,
+    height: 80,
+    borderRadius: 12,
+    backgroundColor: 'white',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalProductDetails: {
+    flex: 1,
+    marginLeft: 16,
   },
   modalProductName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1F2937',
+    color: '#1E293B',
     marginBottom: 8,
+  },
+  modalProductMeta: {
+    gap: 4,
   },
   modalProductInfo: {
     fontSize: 14,
-    color: '#6B7280',
-    marginBottom: 16,
+    color: '#64748B',
   },
   modalInputContainer: {
     marginBottom: 24,
@@ -492,17 +761,30 @@ const styles = StyleSheet.create({
   modalLabel: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1F2937',
-    marginBottom: 8,
+    color: '#1E293B',
+    marginBottom: 12,
+  },
+  modalInputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    backgroundColor: '#F8FAFC',
   },
   modalInput: {
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
     fontSize: 16,
-    color: '#1F2937',
+    color: '#1E293B',
+    textAlign: 'center',
+  },
+  modalInputUnit: {
+    paddingHorizontal: 16,
+    fontSize: 14,
+    color: '#64748B',
+    fontWeight: '500',
   },
   modalButtons: {
     flexDirection: 'row',
@@ -510,49 +792,55 @@ const styles = StyleSheet.create({
   },
   modalCancelButton: {
     flex: 1,
-    backgroundColor: '#F3F4F6',
-    borderRadius: 8,
-    paddingVertical: 12,
+    backgroundColor: '#F1F5F9',
+    borderRadius: 12,
+    paddingVertical: 16,
     alignItems: 'center',
   },
   modalCancelText: {
-    color: '#6B7280',
+    color: '#64748B',
     fontSize: 16,
     fontWeight: '600',
   },
   modalAddButton: {
     flex: 1,
     backgroundColor: '#3B82F6',
-    borderRadius: 8,
-    paddingVertical: 12,
+    borderRadius: 12,
+    paddingVertical: 16,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  modalButtonDisabled: {
+    backgroundColor: '#94A3B8',
   },
   modalAddText: {
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
   },
-  notAuthenticatedText: {
-    fontSize: 16,
-    color: '#6B7280',
-    textAlign: 'center',
-    marginTop: 100,
-  },
   locationItem: {
-    backgroundColor: '#F9FAFB',
-    borderRadius: 8,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
     padding: 16,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#E2E8F0',
   },
   selectedLocationItem: {
     backgroundColor: '#EBF8FF',
     borderColor: '#3B82F6',
   },
+  locationItemContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
   locationItemText: {
     fontSize: 16,
-    color: '#1F2937',
+    color: '#1E293B',
+    fontWeight: '500',
   },
   selectedLocationText: {
     color: '#3B82F6',
