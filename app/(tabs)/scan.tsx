@@ -3,12 +3,13 @@ import { useAppDispatch } from '@/hooks/useAppDispatch';
 import { useAppSelector as useSelector } from '@/hooks/useAppSelector';
 import {
   addInventoryLine,
+  loadInventoryLines,
   removeInventoryLine,
   searchProductByBarcode
 } from '@/store/inventorySlice';
 import { InventoryLine, Product } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
   FlatList,
@@ -30,6 +31,13 @@ export default function ScanScreen() {
   const dispatch = useAppDispatch();
   const { loading, error, currentLocation, inventoryLines } = useSelector(state => state.inventory);
   const { isAuthenticated } = useSelector(state => state.auth);
+
+  // Load existing inventory lines when location changes
+  useEffect(() => {
+    if (isAuthenticated && currentLocation) {
+      dispatch(loadInventoryLines(currentLocation.id));
+    }
+  }, [dispatch, isAuthenticated, currentLocation]);
 
   const handleScan = async (barcode: string) => {
     if (!isAuthenticated) {
@@ -82,6 +90,9 @@ export default function ScanScreen() {
       setScannedProduct(null);
       setQuantity('');
       
+      // Reload inventory lines to get updated data
+      dispatch(loadInventoryLines(currentLocation.id));
+      
       Alert.alert(
         'Succès',
         'Produit ajouté à l\'inventaire',
@@ -95,13 +106,23 @@ export default function ScanScreen() {
     }
   };
 
-  const handleRemoveFromInventory = (lineId: number) => {
+  const handleRemoveFromInventory = async (lineId: number) => {
     Alert.alert(
       'Confirmer la suppression',
       'Êtes-vous sûr de vouloir supprimer cette ligne d\'inventaire ?',
       [
         { text: 'Annuler', style: 'cancel' },
-        { text: 'Supprimer', style: 'destructive', onPress: () => dispatch(removeInventoryLine(lineId)) },
+        { 
+          text: 'Supprimer', 
+          style: 'destructive', 
+          onPress: async () => {
+            dispatch(removeInventoryLine(lineId));
+            // Reload inventory lines after removal
+            if (currentLocation) {
+              dispatch(loadInventoryLines(currentLocation.id));
+            }
+          }
+        },
       ]
     );
   };

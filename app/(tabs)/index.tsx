@@ -1,8 +1,9 @@
 import { useAppDispatch } from '@/hooks/useAppDispatch';
 import { useAppSelector as useSelector } from '@/hooks/useAppSelector';
+import { odooService } from '@/services/odoo';
 import { clearError, login } from '@/store/authSlice';
 import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Alert,
   KeyboardAvoidingView,
@@ -16,17 +17,53 @@ import {
 } from 'react-native';
 
 export default function LoginScreen() {
-  const [url, setUrl] = useState('http://192.168.68.148:8070');
-  const [database, setDatabase] = useState('ilo_market');
+  const [url, setUrl] = useState('http://192.168.68.169:8070');
+  const [database, setDatabase] = useState('');
   const [username, setUsername] = useState('benjadaoro');
   const [password, setPassword] = useState('Voloina713');
+  const [showDatabaseField, setShowDatabaseField] = useState(false);
+  const [loadingDatabases, setLoadingDatabases] = useState(false);
 
   const dispatch = useAppDispatch();
   const { loading, error, isAuthenticated, user } = useSelector(state => state.auth);
 
+  // Check if database field should be shown when URL changes
+  useEffect(() => {
+    const checkDatabases = async () => {
+      if (url.trim()) {
+        setLoadingDatabases(true);
+        try {
+          odooService.setConfig({ url: url.trim(), database: '', username: '', password: '' });
+          const databases = await odooService.getDatabase();
+          
+          if (!databases || (Array.isArray(databases) && databases.length === 0)) {
+            setShowDatabaseField(true);
+            setDatabase('');
+          } else if (Array.isArray(databases) && databases.length === 1) {
+            setDatabase(databases[0]);
+            setShowDatabaseField(false);
+          } else if (Array.isArray(databases) && databases.length > 1) {
+            setShowDatabaseField(true);
+            if (!database || !databases.includes(database)) {
+              setDatabase(databases[0]);
+            }
+          }
+        } catch (error) {
+          console.log('Could not fetch databases, showing database field');
+          setShowDatabaseField(true);
+        } finally {
+          setLoadingDatabases(false);
+        }
+      }
+    };
+
+    const timeoutId = setTimeout(checkDatabases, 500); // Debounce URL changes
+    return () => clearTimeout(timeoutId);
+  }, [url]);
+
   const handleLogin = async () => {
-    if (!url || !database || !username || !password) {
-      Alert.alert('Erreur', 'Veuillez remplir tous les champs');
+    if (!url || !username || !password || (showDatabaseField && !database)) {
+      Alert.alert('Erreur', 'Veuillez remplir tous les champs requis');
       return;
     }
 
@@ -74,7 +111,7 @@ export default function LoginScreen() {
 
         <View style={styles.form}>
           <View style={styles.inputGroup}>
-            <View style={styles.inputContainer}>
+            <View style={[styles.inputContainer, loadingDatabases && styles.inputContainerLoading]}>
               <Ionicons name="globe-outline" size={20} color="#6B7280" />
               <TextInput
                 style={styles.input}
@@ -84,22 +121,27 @@ export default function LoginScreen() {
                 autoCapitalize="none"
                 autoCorrect={false}
               />
+              {loadingDatabases && (
+                <Ionicons name="refresh" size={20} color="#3B82F6" />
+              )}
             </View>
           </View>
 
-          <View style={styles.inputGroup}>
-            <View style={styles.inputContainer}>
-              <Ionicons name="server-outline" size={20} color="#6B7280" />
-              <TextInput
-                style={styles.input}
-                placeholder="Nom de la base de données"
-                value={database}
-                onChangeText={setDatabase}
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
+          {showDatabaseField && (
+            <View style={styles.inputGroup}>
+              <View style={styles.inputContainer}>
+                <Ionicons name="server-outline" size={20} color="#6B7280" />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Nom de la base de données"
+                  value={database}
+                  onChangeText={setDatabase}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+              </View>
             </View>
-          </View>
+          )}
 
           <View style={styles.inputGroup}>
             <View style={styles.inputContainer}>
@@ -137,12 +179,13 @@ export default function LoginScreen() {
           )}
 
           <TouchableOpacity 
-            style={[styles.loginButton, loading && styles.loginButtonDisabled]}
+            style={[styles.loginButton, (loading || loadingDatabases) && styles.loginButtonDisabled]}
             onPress={handleLogin}
-            disabled={loading}
+            disabled={loading || loadingDatabases}
           >
             <Text style={styles.loginButtonText}>
-              {loading ? 'Connexion en cours...' : 'Se connecter'}
+              {loading ? 'Connexion en cours...' : 
+               loadingDatabases ? 'Vérification...' : 'Se connecter'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -200,6 +243,9 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 12,
     backgroundColor: '#FFFFFF',
+  },
+  inputContainerLoading: {
+    borderColor: '#3B82F6',
   },
   input: {
     flex: 1,

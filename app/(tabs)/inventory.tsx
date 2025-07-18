@@ -403,6 +403,9 @@ export default function InventoryScreen() {
 }
 
 const styles = StyleSheet.create({
+  // defaultFont: {
+  //   fontFamily: 'SpaceMono-Regular', // Remplacez par le nom de votre police
+  // },
   container: {
     flex: 1,
     backgroundColor: '#F8FAFC',

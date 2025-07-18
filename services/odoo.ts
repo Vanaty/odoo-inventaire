@@ -1,12 +1,42 @@
 import { InventoryLine, OdooConfig, Product, User } from '@/types';
+import { storageService } from './storage';
 
 class OdooService {
   private config: OdooConfig | null = null;
   private uid: number | null = null;
   private sessionId: string | null = null;
+  private sessionCookie: string | null = null;
+
+  async initializeFromStorage(): Promise<boolean> {
+    try {
+      const [storedUid, storedSessionId, storedCookie, storedConfig] = await Promise.all([
+        storageService.getUid(),
+        storageService.getSessionId(),
+        storageService.getSessionCookie(),
+        storageService.getUserConfig(),
+      ]);
+
+      if (storedUid && storedSessionId && storedCookie && storedConfig) {
+        this.uid = storedUid;
+        this.sessionId = storedSessionId;
+        this.sessionCookie = storedCookie;
+        this.config = storedConfig;
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Error initializing from storage:', error);
+      return false;
+    }
+  }
 
   setConfig(config: OdooConfig) {
     this.config = config;
+  }
+
+  async getDatabase(): Promise<string | null> {
+    const database = await this.xmlRpcCall('/xmlrpc/db', 'list', []);
+    return database
   }
 
   async authenticate(config: OdooConfig): Promise<User> {
@@ -18,13 +48,27 @@ class OdooService {
         'db': config.database,
         'login': config.username,
         'password': config.password,
-      })
+      });
+
+      // Extract uid and session info from auth response
+      if (authResponse && authResponse.uid) {
+        this.uid = authResponse.uid;
+        this.sessionId = authResponse.session_id;
+        
+        // Store session data
+        await Promise.all([
+          storageService.setUid(this.uid? this.uid : 0),
+          storageService.setSessionId(this.sessionId || ''),
+          storageService.setUserConfig(config),
+        ]);
+      } else {
+        throw new Error('Échec de l\'authentification');
+      }
 
       // Get user info via JSON-RPC
       const userInfo = await this.jsonRpcCall('/web/dataset/call_kw', {
         model: 'res.users',
         method: 'read',
-        id: this.uid,
         args: [[this.uid], ['name', 'login', 'email', 'company_id']],
         kwargs: {}
       });
@@ -44,6 +88,7 @@ class OdooService {
       };
     } catch (error) {
       console.error('Authentication error:', error);
+      await this.clearSession();
       throw error;
     }
   }
@@ -52,11 +97,19 @@ class OdooService {
     if (!this.config) {
       throw new Error('Configuration Odoo non définie');
     }
+
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+
+    // Add session cookie if available
+    if (this.sessionCookie) {
+      headers['Cookie'] = this.sessionCookie;
+    }
+
     const response = await fetch(`${this.config.url}${endpoint}`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
       body: JSON.stringify({
         jsonrpc: '2.0',
         method: 'call',
@@ -65,6 +118,13 @@ class OdooService {
       }),
     });
 
+    // Extract and store cookies from response
+    const setCookieHeader = response.headers.get('set-cookie');
+    if (setCookieHeader) {
+      this.sessionCookie = setCookieHeader;
+      await storageService.setSessionCookie(setCookieHeader);
+    }
+
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
@@ -72,10 +132,29 @@ class OdooService {
     const data = await response.json();
 
     if (data.error) {
-      throw new Error(data.error.message || 'Erreur JSON-RPC');
+      throw new Error(JSON.stringify(data) || 'Erreur JSON-RPC');
     }
 
     return data.result;
+  }
+
+  async clearSession(): Promise<void> {
+    this.uid = null;
+    this.sessionId = null;
+    this.sessionCookie = null;
+    await storageService.clearSession();
+  }
+
+  async logout(): Promise<void> {
+    try {
+      if (this.config) {
+        await this.jsonRpcCall('/web/session/destroy', {});
+      }
+    } catch (error) {
+      console.error('Error during logout:', error);
+    } finally {
+      await this.clearSession();
+    }
   }
 
   // XML-RPC calls for authentication
@@ -145,6 +224,16 @@ class OdooService {
       throw new Error('XML-RPC Fault');
     }
 
+    // Handle array responses for database list
+    const arrayMatch = xmlText.match(/<array><data>(.*?)<\/data><\/array>/s);
+    if (arrayMatch) {
+      const valueMatches = arrayMatch[1].match(/<value><string>(.*?)<\/string><\/value>/g);
+      if (valueMatches && valueMatches.length > 0) {
+        return valueMatches.map(match => match.replace(/<value><string>(.*?)<\/string><\/value>/, '$1'));
+      }
+      return [];
+    }
+
     const intMatch = xmlText.match(/<int>(\d+)<\/int>/);
     if (intMatch) {
       return parseInt(intMatch[1], 10);
@@ -207,6 +296,7 @@ class OdooService {
   }
 
   // Inventory operations
+  
   async createInventoryLine(inventoryLine: Omit<InventoryLine, 'id'>): Promise<InventoryLine> {
     try {
       // Search for existing quant
@@ -219,7 +309,7 @@ class OdooService {
         ]],
         kwargs: { limit: 1 }
       });
-
+      console.log('Quant IDs found:', quantIds);
       let quantId;
       if (quantIds.length > 0) {
         // Update existing quant
@@ -228,7 +318,7 @@ class OdooService {
           model: 'stock.quant',
           method: 'write',
           args: [[quantId], {
-            quantity: inventoryLine.product_qty,
+            quantity: inventoryLine.theoretical_qty,
             inventory_quantity: inventoryLine.product_qty
           }],
           kwargs: {}
@@ -242,9 +332,9 @@ class OdooService {
             product_id: inventoryLine.product_id,
             location_id: inventoryLine.location_id,
             quantity: inventoryLine.product_qty,
-            inventory_quantity: inventoryLine.product_qty
           }],
-          kwargs: {}
+          kwargs: {
+          }
         });
       }
 
@@ -254,6 +344,69 @@ class OdooService {
       };
     } catch (error) {
       console.error('Error creating inventory line:', error);
+      throw error;
+    }
+  }
+
+  async getInventoryLines(locationId: number): Promise<InventoryLine[]> {
+    try {
+      const quantIds = await this.jsonRpcCall('/web/dataset/call_kw', {
+        model: 'stock.quant',
+        method: 'search',
+        args: [[['location_id', '=', locationId], ["inventory_quantity_set", "=", true]]],
+        kwargs: { limit: 100 }
+      });
+
+      if (quantIds.length === 0) {
+        return [];
+      }
+
+      const quants = await this.jsonRpcCall('/web/dataset/call_kw', {
+        model: 'stock.quant',
+        method: 'read',
+        args: [quantIds, ['product_id', 'quantity', 'inventory_quantity', 'location_id']],
+        kwargs: {}
+      });
+
+      // Get product details for each quant
+      const productIds = quants.map((quant: any) => quant.product_id[0]);
+      const products = await this.jsonRpcCall('/web/dataset/call_kw', {
+        model: 'product.product',
+        method: 'read',
+        args: [productIds, ['name', 'barcode']],
+        kwargs: {}
+      });
+
+      // Get location details
+      const locationData = await this.jsonRpcCall('/web/dataset/call_kw', {
+        model: 'stock.location',
+        method: 'read',
+        args: [[locationId], ['name']],
+        kwargs: {}
+      });
+
+      const locationName = locationData.length > 0 ? locationData[0].name : 'Unknown Location';
+
+      // Combine data
+      return quants.map((quant: any) => {
+        const product = products.find((p: any) => p.id === quant.product_id[0]);
+        const productQty = quant.inventory_quantity || 0;
+        const theoreticalQty = quant.quantity || 0;
+        
+        return {
+          id: quant.id,
+          product_id: quant.product_id[0],
+          product_name: quant.product_id[1],
+          product_barcode: product?.barcode || '',
+          product_qty: productQty,
+          theoretical_qty: theoreticalQty,
+          difference_qty: productQty - theoreticalQty,
+          location_id: locationId,
+          location_name: locationName
+        };
+      });
+    } catch (error) {
+      console.error('Error getting inventory lines:', error);
       throw error;
     }
   }

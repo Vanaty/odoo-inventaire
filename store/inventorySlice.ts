@@ -60,6 +60,17 @@ export const updateInventoryLine = createAsyncThunk(
   }
 );
 
+export const loadInventoryLines = createAsyncThunk(
+  'inventory/loadInventoryLines',
+  async (locationId: number, { rejectWithValue }) => {
+    try {
+      return await odooService.getInventoryLines(locationId);
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Erreur de chargement des lignes d\'inventaire');
+    }
+  }
+);
+
 export const loadLocations = createAsyncThunk(
   'inventory/loadLocations',
   async (_, { rejectWithValue }) => {
@@ -147,6 +158,19 @@ const inventorySlice = createSlice({
         }
       })
       .addCase(updateInventoryLine.rejected, (state, action) => {
+        state.error = action.payload as string;
+      })
+      // Load inventory lines
+      .addCase(loadInventoryLines.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(loadInventoryLines.fulfilled, (state, action) => {
+        state.loading = false;
+        state.inventoryLines = action.payload;
+      })
+      .addCase(loadInventoryLines.rejected, (state, action) => {
+        state.loading = false;
         state.error = action.payload as string;
       });
   },
