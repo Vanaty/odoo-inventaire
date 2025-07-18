@@ -331,7 +331,8 @@ class OdooService {
           args: [{
             product_id: inventoryLine.product_id,
             location_id: inventoryLine.location_id,
-            quantity: inventoryLine.product_qty,
+            quantity: 0,
+            inventory_quantity: inventoryLine.product_qty,
           }],
           kwargs: {
           }
@@ -430,6 +431,38 @@ class OdooService {
       }
     } catch (error) {
       console.error('Error updating inventory line:', error);
+      throw error;
+    }
+  }
+
+  async deleteInventoryLine(id: number): Promise<void> {
+    try {
+      // Set inventory_quantity to 0 uniquement
+      await this.jsonRpcCall('/web/dataset/call_kw', {
+        model: 'stock.quant',
+        method: 'write',
+        args: [[id], { inventory_quantity: 0,inventory_quantity_set: false }],
+        kwargs: {}
+      });
+    } catch (error) {
+      console.error('Error deleting inventory line:', error);
+      throw error;
+    }
+  }
+
+  async validerInventoryLine(IDs : number[]): Promise<void> {
+    try {
+      if (IDs.length === 0) return;
+
+      // Call the Odoo method to validate inventory lines
+      await this.jsonRpcCall('/web/dataset/call_kw', {
+        model: 'stock.quant',
+        method: 'action_apply_inventory',
+        args: [IDs],
+        kwargs: {}
+      });
+    } catch (error) {
+      console.error('Error validating inventory lines:', error);
       throw error;
     }
   }

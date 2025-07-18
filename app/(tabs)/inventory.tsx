@@ -1,3 +1,4 @@
+import AuthRequired from '@/components/AuthRequired';
 import { useAppDispatch } from '@/hooks/useAppDispatch';
 import { useAppSelector as useSelector } from '@/hooks/useAppSelector';
 import {
@@ -22,7 +23,7 @@ import {
 } from 'react-native';
 
 
-// Memoized ProductItem component
+// ProductItem component
 const ProductItem = memo(({ item, onPress }: { item: Product; onPress: (product: Product) => void }) => (
   <TouchableOpacity
     style={styles.productCard}
@@ -171,15 +172,11 @@ export default function InventoryScreen() {
 
   if (!isAuthenticated) {
     return (
-      <View style={styles.container}>
-        <View style={styles.emptyState}>
-          <Ionicons name="lock-closed-outline" size={64} color="#9CA3AF" />
-          <Text style={styles.emptyStateTitle}>Connexion requise</Text>
-          <Text style={styles.emptyStateText}>
-            Veuillez vous connecter pour accéder à l'inventaire
-          </Text>
-        </View>
-      </View>
+      <AuthRequired 
+        title="Connexion requise"
+        message="Veuillez vous connecter pour accéder à l'inventaire"
+        iconName="cube-outline"
+      />
     );
   }
 
@@ -192,18 +189,18 @@ export default function InventoryScreen() {
             style={styles.locationButton}
             onPress={() => setShowLocationModal(true)}
           >
-            <Ionicons name="location" size={16} color="#3B82F6" />
+            <Ionicons name="location" size={16} color="#FBBF24" />
             <Text style={styles.locationText}>
               {currentLocation?.name || 'Sélectionner'}
             </Text>
-            <Ionicons name="chevron-down" size={16} color="#3B82F6" />
+            <Ionicons name="chevron-down" size={16} color="#FBBF24" />
           </TouchableOpacity>
         </View>
       </View>
 
       <View style={styles.searchContainer}>
         <View style={styles.searchInputContainer}>
-          <Ionicons name="search-outline" size={20} color="#6B7280" />
+          <Ionicons name="search-outline" size={20} color="#FBBF24" />
           <TextInput
             style={styles.searchInput}
             placeholder="Rechercher des produits..."
@@ -403,9 +400,6 @@ export default function InventoryScreen() {
 }
 
 const styles = StyleSheet.create({
-  // defaultFont: {
-  //   fontFamily: 'SpaceMono-Regular', // Remplacez par le nom de votre police
-  // },
   container: {
     flex: 1,
     backgroundColor: '#F8FAFC',
@@ -414,14 +408,14 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     paddingTop: 60,
     paddingHorizontal: 20,
-    paddingBottom: 20,
+    paddingBottom: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#E2E8F0',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
   headerContent: {
     flexDirection: 'row',
@@ -429,30 +423,30 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#1E293B',
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#0F172A',
   },
   locationButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#EBF8FF',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 12,
+    backgroundColor: '#FEF3E2',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#BFDBFE',
+    borderColor: '#FEF3E2',
   },
   locationText: {
-    marginHorizontal: 6,
-    color: '#3B82F6',
-    fontSize: 14,
+    marginHorizontal: 4,
+    color: '#df401d',
+    fontSize: 12,
     fontWeight: '600',
   },
   searchContainer: {
     flexDirection: 'row',
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingVertical: 12,
     backgroundColor: 'white',
   },
   searchInputContainer: {
@@ -460,30 +454,30 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#F8FAFC',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    marginRight: 12,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    marginRight: 10,
     borderWidth: 1,
     borderColor: '#E2E8F0',
   },
   searchInput: {
     flex: 1,
-    paddingVertical: 12,
-    paddingLeft: 8,
-    fontSize: 16,
+    paddingVertical: 10,
+    paddingLeft: 6,
+    fontSize: 14,
     color: '#1E293B',
   },
   searchButton: {
-    backgroundColor: '#3B82F6',
-    borderRadius: 12,
-    paddingHorizontal: 20,
+    backgroundColor: '#FBBF24',
+    borderRadius: 10,
+    paddingHorizontal: 16,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#3B82F6',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowColor: '#FBBF24',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
   },
   content: {
     flex: 1,
@@ -491,56 +485,56 @@ const styles = StyleSheet.create({
   },
   section: {
     flex: 1,
-    marginVertical: 12,
+    marginVertical: 8,
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
   },
   sectionTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '700',
-    color: '#1E293B',
+    color: '#0F172A',
   },
   productCount: {
-    backgroundColor: '#3B82F6',
-    borderRadius: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
+    backgroundColor: '#FBBF24',
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
   },
   productCountText: {
     color: 'white',
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
   },
   inventoryCount: {
     backgroundColor: '#10B981',
-    borderRadius: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
   },
   inventoryCountText: {
     color: 'white',
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
   },
   productList: {
     flex: 1,
   },
   productListContent: {
-    paddingBottom: 20,
+    paddingBottom: 16,
   },
   productCard: {
     backgroundColor: 'white',
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: 12,
+    padding: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
     borderWidth: 1,
     borderColor: '#F1F5F9',
   },
@@ -549,18 +543,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   productImageContainer: {
-    marginRight: 16,
+    marginRight: 12,
   },
   productImage: {
-    width: 64,
-    height: 64,
-    borderRadius: 12,
+    width: 48,
+    height: 48,
+    borderRadius: 8,
     backgroundColor: '#F8FAFC',
   },
   productImagePlaceholder: {
-    width: 64,
-    height: 64,
-    borderRadius: 12,
+    width: 48,
+    height: 48,
+    borderRadius: 8,
     backgroundColor: '#F1F5F9',
     justifyContent: 'center',
     alignItems: 'center',
@@ -569,129 +563,110 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   productName: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
-    color: '#1E293B',
-    marginBottom: 8,
+    color: '#0F172A',
+    marginBottom: 6,
   },
   productDetails: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 6,
+    marginBottom: 4,
   },
   productCodeContainer: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   productCode: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#64748B',
-    marginLeft: 4,
+    marginLeft: 3,
   },
   productQtyContainer: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   productQty: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#10B981',
     fontWeight: '600',
-    marginLeft: 4,
+    marginLeft: 3,
   },
   barcodeContainer: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   productBarcode: {
-    fontSize: 12,
+    fontSize: 10,
     color: '#94A3B8',
     fontFamily: 'monospace',
-    marginLeft: 4,
+    marginLeft: 3,
   },
   addButton: {
-    marginLeft: 12,
+    marginLeft: 8,
   },
   loadingContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 20,
+    paddingVertical: 16,
   },
   loadingText: {
-    marginLeft: 8,
-    fontSize: 16,
+    marginLeft: 6,
+    fontSize: 14,
     color: '#64748B',
   },
   quickActionsContainer: {
-    paddingVertical: 20,
+    paddingVertical: 16,
   },
   quickActionCard: {
     backgroundColor: 'white',
-    borderRadius: 16,
-    padding: 20,
+    borderRadius: 12,
+    padding: 16,
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
     borderWidth: 1,
     borderColor: '#F1F5F9',
   },
   quickActionTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '600',
-    color: '#1E293B',
-    marginTop: 8,
+    color: '#0F172A',
+    marginTop: 6,
   },
   quickActionText: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#64748B',
     textAlign: 'center',
-    marginTop: 4,
+    marginTop: 3,
   },
   itemSeparator: {
-    height: 12,
-  },
-  emptyState: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 40,
-  },
-  emptyStateTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#1E293B',
-    marginTop: 16,
-    marginBottom: 8,
-  },
-  emptyStateText: {
-    fontSize: 16,
-    color: '#64748B',
-    textAlign: 'center',
-    lineHeight: 24,
+    height: 10,
   },
   emptyProducts: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 40,
+    paddingVertical: 32,
   },
   emptyInventory: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 40,
+    paddingVertical: 32,
   },
   emptyText: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#64748B',
-    marginTop: 12,
+    marginTop: 10,
     fontWeight: '500',
   },
   emptySubtext: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#94A3B8',
-    marginTop: 4,
+    marginTop: 3,
   },
   modalOverlay: {
     flex: 1,
@@ -702,132 +677,132 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     backgroundColor: 'white',
-    borderRadius: 20,
-    padding: 24,
+    borderRadius: 16,
+    padding: 20,
     width: '100%',
-    maxWidth: 400,
+    maxWidth: 380,
     maxHeight: '80%',
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 20,
   },
   modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#1E293B',
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#0F172A',
   },
   modalProductContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#F8FAFC',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 24,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 20,
   },
   modalProductImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 12,
+    width: 60,
+    height: 60,
+    borderRadius: 8,
     backgroundColor: 'white',
   },
   modalProductImagePlaceholder: {
-    width: 80,
-    height: 80,
-    borderRadius: 12,
+    width: 60,
+    height: 60,
+    borderRadius: 8,
     backgroundColor: 'white',
     justifyContent: 'center',
     alignItems: 'center',
   },
   modalProductDetails: {
     flex: 1,
-    marginLeft: 16,
+    marginLeft: 12,
   },
   modalProductName: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
-    color: '#1E293B',
-    marginBottom: 8,
+    color: '#0F172A',
+    marginBottom: 6,
   },
   modalProductMeta: {
-    gap: 4,
+    gap: 3,
   },
   modalProductInfo: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#64748B',
   },
   modalInputContainer: {
-    marginBottom: 24,
+    marginBottom: 20,
   },
   modalLabel: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
-    color: '#1E293B',
-    marginBottom: 12,
+    color: '#0F172A',
+    marginBottom: 8,
   },
   modalInputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 2,
     borderColor: '#E2E8F0',
-    borderRadius: 12,
+    borderRadius: 8,
     backgroundColor: '#F8FAFC',
   },
   modalInput: {
     flex: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    fontSize: 16,
-    color: '#1E293B',
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    fontSize: 14,
+    color: '#0F172A',
     textAlign: 'center',
   },
   modalInputUnit: {
-    paddingHorizontal: 16,
-    fontSize: 14,
+    paddingHorizontal: 12,
+    fontSize: 12,
     color: '#64748B',
     fontWeight: '500',
   },
   modalButtons: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 10,
   },
   modalCancelButton: {
     flex: 1,
     backgroundColor: '#F1F5F9',
-    borderRadius: 12,
-    paddingVertical: 16,
+    borderRadius: 8,
+    paddingVertical: 12,
     alignItems: 'center',
   },
   modalCancelText: {
     color: '#64748B',
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
   },
   modalAddButton: {
     flex: 1,
     backgroundColor: '#3B82F6',
-    borderRadius: 12,
-    paddingVertical: 16,
+    borderRadius: 8,
+    paddingVertical: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    gap: 6,
   },
   modalButtonDisabled: {
     backgroundColor: '#94A3B8',
   },
   modalAddText: {
     color: 'white',
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
   },
   locationItem: {
     backgroundColor: '#F8FAFC',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 8,
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 6,
     borderWidth: 1,
     borderColor: '#E2E8F0',
   },
@@ -841,8 +816,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   locationItemText: {
-    fontSize: 16,
-    color: '#1E293B',
+    fontSize: 14,
+    color: '#0F172A',
     fontWeight: '500',
   },
   selectedLocationText: {

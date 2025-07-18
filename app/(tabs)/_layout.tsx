@@ -6,7 +6,7 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#3B82F6',
+        tabBarActiveTintColor: '#de2a0e',
         tabBarInactiveTintColor: '#6B7280',
         tabBarStyle: {
           backgroundColor: '#FFFFFF',
@@ -21,9 +21,9 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Connexion',
+          title: 'Accueil',
           tabBarIcon: ({ size, color }) => (
-            <Ionicons name="log-in-outline" size={size} color={color} />
+            <Ionicons name="home-outline" size={size} color={color} />
           ),
         }}
       />

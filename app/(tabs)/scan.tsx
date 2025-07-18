@@ -1,11 +1,13 @@
+import AuthRequired from '@/components/AuthRequired';
 import Scanner from '@/components/Scanner';
 import { useAppDispatch } from '@/hooks/useAppDispatch';
 import { useAppSelector as useSelector } from '@/hooks/useAppSelector';
 import {
   addInventoryLine,
+  deleteInventoryLine,
   loadInventoryLines,
-  removeInventoryLine,
-  searchProductByBarcode
+  searchProductByBarcode,
+  validateInventoryLines
 } from '@/store/inventorySlice';
 import { InventoryLine, Product } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
@@ -106,6 +108,56 @@ export default function ScanScreen() {
     }
   };
 
+  const handleValidateAll = async () => {
+    if (inventoryLines.length === 0) {
+      Alert.alert('Aucune ligne', 'Il n\'y a aucune ligne d\'inventaire à valider');
+      return;
+    }
+
+    Alert.alert(
+      'Valider tout l\'inventaire',
+      `Êtes-vous sûr de vouloir valider toutes les ${inventoryLines.length} lignes d'inventaire ?`,
+      [
+        { text: 'Annuler', style: 'cancel' },
+        { 
+          text: 'Valider tout', 
+          style: 'default',
+          onPress: async () => {
+            try {
+              const lineIds = inventoryLines.map(line => line.id!).filter(id => id);
+              await dispatch(validateInventoryLines(lineIds)).unwrap();
+              Alert.alert('Succès', 'Toutes les lignes d\'inventaire ont été validées');
+            } catch (error) {
+              Alert.alert('Erreur', error as string);
+            }
+          }
+        },
+      ]
+    );
+  };
+
+  const handleValidateLine = async (lineId: number, productName: string) => {
+    Alert.alert(
+      'Valider la ligne',
+      `Valider la ligne d'inventaire pour "${productName}" ?`,
+      [
+        { text: 'Annuler', style: 'cancel' },
+        { 
+          text: 'Valider', 
+          style: 'default',
+          onPress: async () => {
+            try {
+              await dispatch(validateInventoryLines([lineId])).unwrap();
+              Alert.alert('Succès', 'Ligne d\'inventaire validée');
+            } catch (error) {
+              Alert.alert('Erreur', error as string);
+            }
+          }
+        },
+      ]
+    );
+  };
+
   const handleRemoveFromInventory = async (lineId: number) => {
     Alert.alert(
       'Confirmer la suppression',
@@ -116,10 +168,10 @@ export default function ScanScreen() {
           text: 'Supprimer', 
           style: 'destructive', 
           onPress: async () => {
-            dispatch(removeInventoryLine(lineId));
-            // Reload inventory lines after removal
-            if (currentLocation) {
-              dispatch(loadInventoryLines(currentLocation.id));
+            try {
+              await dispatch(deleteInventoryLine(lineId)).unwrap();
+            } catch (error) {
+              Alert.alert('Erreur', error as string);
             }
           }
         },
@@ -131,20 +183,34 @@ export default function ScanScreen() {
     <View style={styles.inventoryCard}>
       <View style={styles.inventoryHeader}>
         <View style={styles.inventoryProductInfo}>
-          <Text style={styles.inventoryProductName} numberOfLines={1}>{item.product_name}</Text>
+          <Text style={styles.inventoryProductName} numberOfLines={2}>{item.product_name}</Text>
           <View style={styles.inventoryMeta}>
-            <Text style={styles.inventoryLocation}>📍 {item.location_name}</Text>
+            <View style={styles.metaItem}>
+              <Ionicons name="location" size={14} color="#64748B" />
+              <Text style={styles.inventoryLocation}>{item.location_name}</Text>
+            </View>
             {item.product_barcode && (
-              <Text style={styles.inventoryBarcode}>📱 {item.product_barcode}</Text>
+              <View style={styles.metaItem}>
+                <Ionicons name="barcode" size={14} color="#64748B" />
+                <Text style={styles.inventoryBarcode}>{item.product_barcode}</Text>
+              </View>
             )}
           </View>
         </View>
-        <TouchableOpacity
-          style={styles.removeButton}
-          onPress={() => item.id && handleRemoveFromInventory(item.id)}
-        >
-          <Ionicons name="trash-outline" size={18} color="#DC2626" />
-        </TouchableOpacity>
+        <View style={styles.actionButtons}>
+          <TouchableOpacity
+            style={styles.validateButton}
+            onPress={() => item.id && handleValidateLine(item.id, item.product_name)}
+          >
+            <Ionicons name="checkmark" size={20} color="#10B981" />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.removeButton}
+            onPress={() => item.id && handleRemoveFromInventory(item.id)}
+          >
+            <Ionicons name="trash" size={20} color="#EF4444" />
+          </TouchableOpacity>
+        </View>
       </View>
       
       <View style={styles.inventoryContent}>
@@ -154,7 +220,7 @@ export default function ScanScreen() {
             <Text style={styles.quantityValue}>{item.theoretical_qty}</Text>
           </View>
           <View style={styles.quantityArrow}>
-            <Ionicons name="arrow-forward" size={16} color="#9CA3AF" />
+            <Ionicons name="arrow-forward" size={20} color="#CBD5E1" />
           </View>
           <View style={styles.quantityItem}>
             <Text style={styles.quantityLabel}>Compté</Text>
@@ -172,15 +238,15 @@ export default function ScanScreen() {
           <Ionicons 
             name={item.difference_qty === 0 ? "checkmark-circle" : 
                   item.difference_qty > 0 ? "trending-up" : "trending-down"} 
-            size={16} 
+            size={18} 
             color={item.difference_qty === 0 ? '#0EA5E9' :
-                   item.difference_qty > 0 ? '#10B981' : '#DC2626'} 
+                   item.difference_qty > 0 ? '#10B981' : '#EF4444'} 
           />
           <Text style={[
             styles.differenceText,
             { 
               color: item.difference_qty === 0 ? '#0EA5E9' :
-                     item.difference_qty > 0 ? '#10B981' : '#DC2626' 
+                     item.difference_qty > 0 ? '#10B981' : '#EF4444' 
             }
           ]}>
             {item.difference_qty === 0 ? 'Conforme' : 
@@ -193,15 +259,11 @@ export default function ScanScreen() {
 
   if (!isAuthenticated) {
     return (
-      <View style={styles.container}>
-        <View style={styles.centerContent}>
-          <Ionicons name="lock-closed-outline" size={64} color="#9CA3AF" />
-          <Text style={styles.emptyStateTitle}>Connexion requise</Text>
-          <Text style={styles.notAuthenticatedText}>
-            Veuillez vous connecter pour utiliser le scanner
-          </Text>
-        </View>
-      </View>
+      <AuthRequired
+        title='Connexion requise'
+        message='Veuillez vous connecter pour accéder au scanner'
+        iconName='camera-outline'
+      />
     );
   }
 
@@ -223,9 +285,12 @@ export default function ScanScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerContent}>
-          <View>
-            <Text style={styles.title}>📱 Scanner</Text>
-            <Text style={styles.subtitle}>📍 {currentLocation.name}</Text>
+          <View style={styles.headerInfo}>
+            <Text style={styles.title}>Scanner</Text>
+            <View style={styles.locationBadge}>
+              <Ionicons name="location" size={14} color="#df9e1d" />
+              <Text style={styles.subtitle}>{currentLocation.name}</Text>
+            </View>
           </View>
           <View style={styles.statsContainer}>
             <View style={styles.statCard}>
@@ -237,42 +302,44 @@ export default function ScanScreen() {
       </View>
 
       <View style={styles.content}>
-        <View style={styles.scanSection}>
-          {lastScannedCode && (
-            <View style={styles.lastScanContainer}>
+        {lastScannedCode && (
+          <View style={styles.lastScanContainer}>
+            <View style={styles.successIcon}>
               <Ionicons name="checkmark-circle" size={20} color="#10B981" />
-              <View style={styles.lastScanInfo}>
-                <Text style={styles.lastScanLabel}>Dernier scan</Text>
-                <Text style={styles.lastScanCode}>{lastScannedCode}</Text>
-              </View>
             </View>
-          )}
-
-          <TouchableOpacity
-            style={styles.scanButton}
-            onPress={() => setShowScanner(true)}
-          >
-            <View style={styles.scanButtonContent}>
-              <Ionicons name="camera-outline" size={28} color="white" />
-              <Text style={styles.scanButtonText}>Scanner un produit</Text>
-              <Text style={styles.scanButtonSubtext}>Appuyez pour commencer</Text>
+            <View style={styles.lastScanInfo}>
+              <Text style={styles.lastScanLabel}>Dernier scan</Text>
+              <Text style={styles.lastScanCode}>{lastScannedCode}</Text>
             </View>
-          </TouchableOpacity>
-        </View>
+          </View>
+        )}
 
         <View style={styles.inventorySection}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>📋 Lignes d'inventaire</Text>
-            <View style={styles.inventoryCount}>
-              <Text style={styles.inventoryCountText}>{inventoryLines.length}</Text>
+            <View style={styles.sectionTitleContainer}>
+              <Ionicons name="list" size={20} color="#1E293B" />
+              <Text style={styles.sectionTitle}>Lignes d'inventaire</Text>
+            </View>
+            <View style={styles.headerActions}>
+              {inventoryLines.length > 0 && (
+                <TouchableOpacity
+                  style={styles.validateAllButton}
+                  onPress={handleValidateAll}
+                >
+                  <Ionicons name="checkmark-done" size={16} color="white" />
+                  <Text style={styles.validateAllText}>Valider tout</Text>
+                </TouchableOpacity>
+              )}
             </View>
           </View>
           
           {inventoryLines.length === 0 ? (
             <View style={styles.emptyInventory}>
-              <Ionicons name="clipboard-outline" size={48} color="#9CA3AF" />
+              <View style={styles.emptyIcon}>
+                <Ionicons name="clipboard-outline" size={48} color="#CBD5E1" />
+              </View>
               <Text style={styles.emptyText}>Aucune ligne d'inventaire</Text>
-              <Text style={styles.emptySubtext}>Scannez des produits pour commencer</Text>
+              <Text style={styles.emptySubtext}>Appuyez sur le bouton caméra pour scanner</Text>
             </View>
           ) : (
             <FlatList
@@ -287,6 +354,15 @@ export default function ScanScreen() {
           )}
         </View>
       </View>
+
+      {/* Floating Action Button */}
+      <TouchableOpacity
+        style={styles.floatingButton}
+        onPress={() => setShowScanner(true)}
+        activeOpacity={0.8}
+      >
+        <Ionicons name="camera" size={28} color="white" />
+      </TouchableOpacity>
 
       {/* Scanner Modal */}
       <Modal
@@ -309,27 +385,37 @@ export default function ScanScreen() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Ionicons name="checkmark-circle-outline" size={48} color="#10B981" />
-            <Text style={styles.modalTitle}>Produit trouvé !</Text>
+            <View style={styles.modalIcon}>
+              <Ionicons name="checkmark-circle" size={56} color="#10B981" />
+            </View>
+            <Text style={styles.modalTitle}>Produit trouvé</Text>
             
             {scannedProduct && (
               <>
-                <Text style={styles.modalProductName}>{scannedProduct.name}</Text>
-                <Text style={styles.modalProductInfo}>
-                  Code: {scannedProduct.default_code}
-                </Text>
-                <Text style={styles.modalProductInfo}>
-                  Stock actuel: {scannedProduct.qty_available} {scannedProduct.uom_name}
-                </Text>
+                <View style={styles.productCard}>
+                  <Text style={styles.modalProductName}>{scannedProduct.name}</Text>
+                  <View style={styles.productDetails}>
+                    <View style={styles.productDetailItem}>
+                      <Text style={styles.productDetailLabel}>Code:</Text>
+                      <Text style={styles.productDetailValue}>{scannedProduct.default_code}</Text>
+                    </View>
+                    <View style={styles.productDetailItem}>
+                      <Text style={styles.productDetailLabel}>Stock actuel:</Text>
+                      <Text style={styles.productDetailValue}>
+                        {scannedProduct.qty_available} {scannedProduct.uom_name}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
                 
                 <View style={styles.modalInputContainer}>
-                  <Text style={styles.modalLabel}>Quantité comptée:</Text>
+                  <Text style={styles.modalLabel}>Quantité comptée</Text>
                   <TextInput
                     style={styles.modalInput}
                     value={quantity}
                     onChangeText={setQuantity}
                     keyboardType="numeric"
-                    placeholder="0"
+                    placeholder="Entrez la quantité"
                     autoFocus
                   />
                 </View>
@@ -342,11 +428,11 @@ export default function ScanScreen() {
                     <Text style={styles.modalCancelText}>Annuler</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={styles.modalAddButton}
+                    style={[styles.modalAddButton, !quantity && styles.modalAddButtonDisabled]}
                     onPress={handleAddToInventory}
                     disabled={!quantity}
                   >
-                    <Text style={styles.modalAddText}>Ajouter</Text>
+                    <Text style={styles.modalAddText}>Ajouter à l'inventaire</Text>
                   </TouchableOpacity>
                 </View>
               </>
@@ -367,112 +453,112 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     paddingTop: 60,
     paddingHorizontal: 20,
-    paddingBottom: 20,
+    paddingBottom: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#E2E8F0',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
   headerContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  headerInfo: {
+    flex: 1,
+  },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#1E293B',
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginBottom: 6,
+  },
+  locationBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEF3E2',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 16,
+    alignSelf: 'flex-start',
   },
   subtitle: {
-    fontSize: 16,
-    color: '#64748B',
-    marginTop: 4,
+    fontSize: 12,
+    color: '#df401d',
+    fontWeight: '600',
+    marginLeft: 4,
   },
   statsContainer: {
     flexDirection: 'row',
     gap: 12,
   },
   statCard: {
-    backgroundColor: '#EBF8FF',
+    backgroundColor: '#F8FAFC',
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 8,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#BFDBFE',
+    borderColor: '#E2E8F0',
+    minWidth: 60,
   },
   statNumber: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#3B82F6',
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#0F172A',
   },
   statLabel: {
-    fontSize: 12,
+    fontSize: 10,
     color: '#64748B',
-    fontWeight: '500',
+    fontWeight: '600',
+    marginTop: 2,
   },
   content: {
     flex: 1,
     paddingHorizontal: 20,
-  },
-  scanSection: {
-    paddingVertical: 20,
+    paddingTop: 16,
   },
   lastScanContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#ECFDF5',
+    backgroundColor: 'white',
     borderRadius: 12,
     padding: 16,
-    marginBottom: 20,
+    marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#A7F3D0',
+    borderColor: '#E2E8F0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  successIcon: {
+    backgroundColor: '#F0FDF4',
+    borderRadius: 16,
+    padding: 8,
   },
   lastScanInfo: {
     marginLeft: 12,
+    flex: 1,
   },
   lastScanLabel: {
-    fontSize: 14,
-    color: '#064E3B',
-    fontWeight: '500',
+    fontSize: 12,
+    color: '#64748B',
+    fontWeight: '600',
+    marginBottom: 2,
   },
   lastScanCode: {
-    fontSize: 16,
-    color: '#10B981',
+    fontSize: 14,
+    color: '#0F172A',
     fontWeight: '600',
     fontFamily: 'monospace',
   },
-  scanButton: {
-    backgroundColor: '#3B82F6',
-    borderRadius: 20,
-    padding: 24,
-    alignItems: 'center',
-    shadowColor: '#3B82F6',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-  scanButtonContent: {
-    alignItems: 'center',
-  },
-  scanButtonText: {
-    color: 'white',
-    fontSize: 20,
-    fontWeight: '700',
-    marginTop: 8,
-  },
-  scanButtonSubtext: {
-    color: 'rgba(255,255,255,0.8)',
-    fontSize: 14,
-    marginTop: 4,
-  },
   inventorySection: {
     flex: 1,
-    paddingBottom: 20,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -480,37 +566,31 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 16,
   },
+  sectionTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   sectionTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '700',
-    color: '#1E293B',
-  },
-  inventoryCount: {
-    backgroundColor: '#10B981',
-    borderRadius: 16,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-  },
-  inventoryCountText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: '600',
+    color: '#0F172A',
+    marginLeft: 8,
   },
   inventoryList: {
     flex: 1,
   },
   inventoryListContent: {
-    paddingBottom: 20,
+    paddingBottom: 100, // Space for floating button
   },
   inventoryCard: {
     backgroundColor: 'white',
     borderRadius: 16,
-    padding: 16,
+    padding: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.05,
     shadowRadius: 8,
-    elevation: 3,
+    elevation: 2,
     borderWidth: 1,
     borderColor: '#F1F5F9',
   },
@@ -518,36 +598,58 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 12,
+    marginBottom: 16,
   },
   inventoryProductInfo: {
     flex: 1,
+    marginRight: 12,
   },
   inventoryProductName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1E293B',
-    marginBottom: 6,
+    color: '#0F172A',
+    marginBottom: 8,
+    lineHeight: 20,
   },
   inventoryMeta: {
-    gap: 2,
+    gap: 6,
+  },
+  metaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   inventoryLocation: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#64748B',
+    marginLeft: 4,
+    fontWeight: '500',
   },
   inventoryBarcode: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#94A3B8',
     fontFamily: 'monospace',
+    marginLeft: 4,
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  validateButton: {
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: '#F0FDF4',
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
   },
   removeButton: {
     padding: 8,
     borderRadius: 8,
     backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
   },
   inventoryContent: {
-    gap: 12,
+    gap: 16,
   },
   quantityRow: {
     flexDirection: 'row',
@@ -557,20 +659,24 @@ const styles = StyleSheet.create({
   quantityItem: {
     flex: 1,
     alignItems: 'center',
-    padding: 12,
+    padding: 16,
     backgroundColor: '#F8FAFC',
     borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
   quantityLabel: {
     fontSize: 12,
     color: '#64748B',
-    marginBottom: 4,
-    fontWeight: '500',
+    marginBottom: 6,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   quantityValue: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#1E293B',
+    color: '#0F172A',
   },
   quantityArrow: {
     paddingHorizontal: 12,
@@ -581,6 +687,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     padding: 12,
     borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.05)',
   },
   differenceText: {
     fontSize: 14,
@@ -588,20 +696,21 @@ const styles = StyleSheet.create({
     marginLeft: 6,
   },
   itemSeparator: {
-    height: 12,
+    height: 16,
   },
   centerContent: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 40,
+    paddingHorizontal: 48,
   },
   emptyStateTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#1E293B',
+    color: '#0F172A',
     marginTop: 16,
     marginBottom: 8,
+    textAlign: 'center',
   },
   notAuthenticatedText: {
     fontSize: 16,
@@ -612,74 +721,123 @@ const styles = StyleSheet.create({
   emptyInventory: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 40,
+    paddingVertical: 48,
+  },
+  emptyIcon: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 24,
+    padding: 20,
+    marginBottom: 12,
   },
   emptyText: {
     fontSize: 16,
     color: '#64748B',
-    marginTop: 12,
-    fontWeight: '500',
+    fontWeight: '600',
+    marginBottom: 6,
   },
   emptySubtext: {
     fontSize: 14,
     color: '#94A3B8',
-    marginTop: 4,
+  },
+  floatingButton: {
+    position: 'absolute',
+    bottom: 24,
+    right: 24,
+    backgroundColor: '#df9e1d',
+    borderRadius: 28,
+    width: 56,
+    height: 56,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#df9e1d',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 8,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(0,0,0,0.6)',
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: 24,
   },
   modalContent: {
     backgroundColor: 'white',
-    borderRadius: 12,
+    borderRadius: 20,
     padding: 24,
-    width: '90%',
+    width: '100%',
     maxWidth: 400,
     alignItems: 'center',
   },
+  modalIcon: {
+    backgroundColor: '#F0FDF4',
+    borderRadius: 24,
+    padding: 12,
+    marginBottom: 16,
+  },
   modalTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
-    color: '#1F2937',
-    marginTop: 12,
-    marginBottom: 16,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginBottom: 20,
     textAlign: 'center',
+  },
+  productCard: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    padding: 16,
+    width: '100%',
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
   modalProductName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1F2937',
-    marginBottom: 8,
+    color: '#0F172A',
+    marginBottom: 12,
     textAlign: 'center',
   },
-  modalProductInfo: {
-    fontSize: 14,
-    color: '#6B7280',
-    marginBottom: 4,
-    textAlign: 'center',
+  productDetails: {
+    gap: 8,
+  },
+  productDetailItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  productDetailLabel: {
+    fontSize: 12,
+    color: '#64748B',
+    fontWeight: '600',
+  },
+  productDetailValue: {
+    fontSize: 12,
+    color: '#0F172A',
+    fontWeight: '600',
   },
   modalInputContainer: {
     width: '100%',
-    marginTop: 16,
     marginBottom: 24,
   },
   modalLabel: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
-    color: '#1F2937',
+    color: '#0F172A',
     marginBottom: 8,
   },
   modalInput: {
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderWidth: 2,
+    borderColor: '#FDE68A',
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 12,
     fontSize: 16,
-    color: '#1F2937',
+    color: '#0F172A',
     textAlign: 'center',
+    fontWeight: '600',
+    backgroundColor: '#FFFBEB',
   },
   modalButtons: {
     flexDirection: 'row',
@@ -688,26 +846,55 @@ const styles = StyleSheet.create({
   },
   modalCancelButton: {
     flex: 1,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: '#F1F5F9',
     borderRadius: 8,
     paddingVertical: 12,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
   modalCancelText: {
-    color: '#6B7280',
-    fontSize: 16,
+    color: '#64748B',
+    fontSize: 14,
     fontWeight: '600',
   },
   modalAddButton: {
-    flex: 1,
-    backgroundColor: '#3B82F6',
+    flex: 2,
+    backgroundColor: '#df401d',
     borderRadius: 8,
     paddingVertical: 12,
     alignItems: 'center',
   },
+  modalAddButtonDisabled: {
+    backgroundColor: '#CBD5E1',
+  },
   modalAddText: {
     color: 'white',
-    fontSize: 16,
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  validateAllButton: {
+    backgroundColor: '#FBBF24',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    shadowColor: '#FBBF24',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  validateAllText: {
+    color: 'white',
+    fontSize: 12,
     fontWeight: '600',
   },
 });

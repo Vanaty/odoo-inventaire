@@ -82,6 +82,30 @@ export const loadLocations = createAsyncThunk(
   }
 );
 
+export const validateInventoryLines = createAsyncThunk(
+  'inventory/validateInventoryLines',
+  async (lineIds: number[], { rejectWithValue }) => {
+    try {
+      await odooService.validerInventoryLine(lineIds);
+      return lineIds;
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Erreur de validation');
+    }
+  }
+);
+
+export const deleteInventoryLine = createAsyncThunk(
+  'inventory/deleteInventoryLine',
+  async (lineId: number, { rejectWithValue }) => {
+    try {
+      await odooService.deleteInventoryLine(lineId);
+      return lineId;
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Erreur de suppression');
+    }
+  }
+);
+
 const inventorySlice = createSlice({
   name: 'inventory',
   initialState,
@@ -171,6 +195,31 @@ const inventorySlice = createSlice({
       })
       .addCase(loadInventoryLines.rejected, (state, action) => {
         state.loading = false;
+        state.error = action.payload as string;
+      })
+      // Validate inventory lines
+      .addCase(validateInventoryLines.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(validateInventoryLines.fulfilled, (state, action) => {
+        state.loading = false;
+        // Remove validated lines from the state
+        state.inventoryLines = state.inventoryLines.filter(
+          line => !action.payload.includes(line.id!)
+        );
+      })
+      .addCase(validateInventoryLines.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      })
+      // Delete inventory line
+      .addCase(deleteInventoryLine.fulfilled, (state, action) => {
+        state.inventoryLines = state.inventoryLines.filter(
+          line => line.id !== action.payload
+        );
+      })
+      .addCase(deleteInventoryLine.rejected, (state, action) => {
         state.error = action.payload as string;
       });
   },

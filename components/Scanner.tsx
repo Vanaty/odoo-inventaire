@@ -14,6 +14,7 @@ export default function Scanner({ onScan, onClose }: ScannerProps) {
   const [facing, setFacing] = useState<CameraType>('back');
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
+  const [flashEnabled, setFlashEnabled] = useState(false);
   const player = useAudioPlayer(audioSource);
 
   useEffect(() => {
@@ -62,6 +63,7 @@ export default function Scanner({ onScan, onClose }: ScannerProps) {
       <CameraView
         style={styles.camera}
         facing={facing}
+        enableTorch={flashEnabled}
         onBarcodeScanned={handleBarCodeScanned}
         barcodeScannerSettings={{
           barcodeTypes: ['qr', 'pdf417', 'code128', 'code39', 'ean13', 'ean8', 'upc_a', 'upc_e'],
@@ -81,12 +83,27 @@ export default function Scanner({ onScan, onClose }: ScannerProps) {
         </View>
         
         <View style={styles.controls}>
-          <TouchableOpacity
-            style={styles.flipButton}
-            onPress={() => setFacing(current => (current === 'back' ? 'front' : 'back'))}
-          >
-            <Text style={styles.flipText}>Retourner</Text>
-          </TouchableOpacity>
+          <View style={styles.controlsRow}>
+            <TouchableOpacity
+              style={styles.controlButton}
+              onPress={() => setFlashEnabled(!flashEnabled)}
+            >
+              <Ionicons 
+                name={flashEnabled ? "flash" : "flash-off"} 
+                size={24} 
+                color="white" 
+              />
+              <Text style={styles.controlText}>Flash</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={styles.controlButton}
+              onPress={() => setFacing(current => (current === 'back' ? 'front' : 'back'))}
+            >
+              <Ionicons name="camera-reverse" size={24} color="white" />
+              <Text style={styles.controlText}>Retourner</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
     </View>
@@ -143,6 +160,24 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 80,
     alignItems: 'center',
+  },
+  controlsRow: {
+    flexDirection: 'row',
+    gap: 20,
+  },
+  controlButton: {
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 25,
+    alignItems: 'center',
+    minWidth: 80,
+  },
+  controlText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '600',
+    marginTop: 4,
   },
   flipButton: {
     backgroundColor: 'rgba(0,0,0,0.7)',
