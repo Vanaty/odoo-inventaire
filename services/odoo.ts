@@ -16,11 +16,14 @@ class OdooService {
         storageService.getUserConfig(),
       ]);
 
-      if (storedUid && storedSessionId && storedCookie && storedConfig) {
+      if (storedUid && storedCookie && storedConfig) {
         this.uid = storedUid;
         this.sessionId = storedSessionId;
         this.sessionCookie = storedCookie;
         this.config = storedConfig;
+        if (this.config) {
+          this.authenticate(this.config);
+        }
         return true;
       }
       return false;

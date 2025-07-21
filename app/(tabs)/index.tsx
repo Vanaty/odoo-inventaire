@@ -5,6 +5,7 @@ import { useAppDispatch } from '@/hooks/useAppDispatch';
 import { useAppSelector as useSelector } from '@/hooks/useAppSelector';
 import { logout } from '@/store/authSlice';
 import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
   Alert,
@@ -159,7 +160,9 @@ export default function HomeScreen() {
               iconColor="#3B82F6"
               title="Gérer l'inventaire"
               description="Onglet Inventaire"
-              onPress={() => {/* Navigate to inventory tab */}}
+              onPress={() => {
+                router.push('/inventory');
+              }}
             />
 
             <FeatureCard
@@ -167,7 +170,9 @@ export default function HomeScreen() {
               iconColor="#10B981"
               title="Scanner des produits"
               description="Onglet Scanner"
-              onPress={() => {/* Navigate to scan tab */}}
+              onPress={() => {/* Navigate to scan tab */
+                router.push('/scan');
+              }}
             />
           </View>
 
@@ -303,7 +308,7 @@ const styles = StyleSheet.create({
   },
   welcomeText: {
     fontSize: 24,
-    fontWeight: '500',
+    fontWeight: '400',
     color: '#1E293B',
     marginBottom: 8,
   },

@@ -8,7 +8,7 @@ interface LogoProps {
 }
 
 export default function Logo({ size = 'medium', variant = 'default', style }: LogoProps) {
-  const logoSource = require('@/assets/images/icon.jpg');
+  const logoSource = require('@/assets/images/icon.png');
   
   const sizeStyles = {
     small: { width: 40, height: 40, borderRadius: 8 },

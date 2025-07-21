@@ -5,17 +5,17 @@ import { clearError, login } from '@/store/authSlice';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Picker } from '@react-native-picker/picker';
-import React, { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
-    Alert,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import Logo from './Logo';
 
@@ -30,7 +30,7 @@ interface LoginProps {
 }
 
 export default function Login({ onLoginSuccess }: LoginProps) {
-  const [url, setUrl] = useState('http://192.168.68.169:8070');
+  const [url, setUrl] = useState('http://192.168.68.150:8070');
   const [database, setDatabase] = useState('');
   const [username, setUsername] = useState('benjadaoro');
   const [password, setPassword] = useState('Voloina713');

@@ -424,7 +424,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 24,
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#0F172A',
   },
   locationButton: {
@@ -495,7 +495,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: '500',
     color: '#0F172A',
   },
   productCount: {
