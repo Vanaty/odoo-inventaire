@@ -101,6 +101,10 @@ class OdooService {
       throw new Error('Configuration Odoo non définie');
     }
 
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), 10000);
+
+
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };
@@ -109,17 +113,24 @@ class OdooService {
     if (this.sessionCookie) {
       headers['Cookie'] = this.sessionCookie;
     }
-
-    const response = await fetch(`${this.config.url}${endpoint}`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({
-        jsonrpc: '2.0',
-        method: 'call',
-        params: params,
-        id: Date.now(),
-      }),
-    });
+    let response: Response;
+    try {
+      response = await fetch(`${this.config.url}${endpoint}`, {
+        method: 'POST',
+        headers,
+        signal: controller.signal,
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          method: 'call',
+          params: params,
+          id: Date.now(),
+        }),
+      });
+      clearTimeout(id);
+    } catch (error) {
+      console.error('Network error:', error);
+      throw new Error('Network error, please check your connection or Odoo server status');
+    }
 
     // Extract and store cookies from response
     const setCookieHeader = response.headers.get('set-cookie');
@@ -532,6 +543,13 @@ class OdooService {
           args: [inventoryId],
           kwargs: {}
         });
+        if (response && response.res_model === 'stock.inventory.conflict') {
+          const context = response.context || {};
+          if (context.default_quant_to_fix_ids && context.default_quant_to_fix_ids.length > 0) {
+            await this.fixInventoryConflict(context.default_quant_to_fix_ids);
+          }
+          return await this.validateAllInventory(name, quant_ids);
+        }
       } else {
         throw new Error('Failed to create inventory name');
       }
