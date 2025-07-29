@@ -77,22 +77,20 @@ export default function Scanner({ onScan, onClose }: ScannerProps) {
 
   if (!permission.granted) {
     return (
-      <View style={styles.permissionContainer}>
-        <View style={styles.permissionContent}>
-          <View style={styles.iconContainer}>
-            <Ionicons name="camera-outline" size={80} color="#4facfe" />
-          </View>
-          <Text style={styles.permissionTitle}>Accès à la caméra requis</Text>
-          <Text style={styles.permissionMessage}>
-            Pour scanner les codes-barres, nous avons besoin d'accéder à votre caméra
-          </Text>
-          <TouchableOpacity style={styles.permissionButton} onPress={requestPermission}>
-            <View style={styles.buttonContent}>
-              <Ionicons name="camera" size={20} color="white" style={styles.buttonIcon} />
-              <Text style={styles.permissionButtonText}>Autoriser la caméra</Text>
-            </View>
-          </TouchableOpacity>
+      <View style={styles.permissionDeniedContainer}>
+        <View style={styles.iconContainer}>
+          <Ionicons name="camera-outline" size={80} color="#4facfe" />
         </View>
+        <Text style={styles.permissionTitle}>Accès à la caméra requis</Text>
+        <Text style={styles.permissionMessage}>
+          Pour scanner les codes-barres, nous avons besoin d'accéder à votre caméra
+        </Text>
+        <TouchableOpacity style={styles.permissionButton} onPress={requestPermission}>
+          <View style={styles.buttonContent}>
+            <Ionicons name="camera" size={20} color="white" style={styles.buttonIcon} />
+            <Text style={styles.permissionButtonText}>Autoriser la caméra</Text>
+          </View>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -249,7 +247,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: 20,
     height: 20,
-    borderColor: '#4facfe',
+    borderColor: '#1DC8CD', // secondary
     borderWidth: 3,
   },
   topLeft: {
@@ -281,8 +279,8 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 2,
-    backgroundColor: '#4facfe',
-    shadowColor: '#4facfe',
+    backgroundColor: '#1DC8CD', // secondary
+    shadowColor: '#1DC8CD', // secondary
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.8,
     shadowRadius: 4,
@@ -356,16 +354,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 40,
   },
-  permissionContent: {
+  permissionDeniedContainer: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 40,
-    backgroundColor: '#16213e',
+    backgroundColor: '#1E2229', // dark_grey
     borderRadius: 20,
     padding: 40,
     marginHorizontal: 20,
     borderWidth: 2,
-    borderColor: '#4facfe',
-    shadowColor: '#4facfe',
+    borderColor: '#1DC8CD', // secondary
+    shadowColor: '#1DC8CD', // secondary
     shadowOffset: {
       width: 0,
       height: 0,
@@ -375,12 +375,12 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   iconContainer: {
-    backgroundColor: 'rgba(79, 172, 254, 0.1)',
+    backgroundColor: 'rgba(29, 200, 205, 0.1)', // secondary with alpha
     padding: 20,
     borderRadius: 50,
     marginBottom: 20,
     borderWidth: 2,
-    borderColor: 'rgba(79, 172, 254, 0.3)',
+    borderColor: 'rgba(29, 200, 205, 0.3)', // secondary with alpha
   },
   permissionTitle: {
     color: 'white',
@@ -405,7 +405,7 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#4facfe',
+    backgroundColor: '#1DC8CD', // secondary
     marginHorizontal: 4,
   },
   loadingDotDelay1: {
@@ -416,10 +416,10 @@ const styles = StyleSheet.create({
   },
   permissionButton: {
     marginTop: 30,
-    backgroundColor: '#4facfe',
+    backgroundColor: '#1DC8CD', // secondary
     borderRadius: 25,
     overflow: 'hidden',
-    shadowColor: '#4facfe',
+    shadowColor: '#1DC8CD', // secondary
     shadowOffset: {
       width: 0,
       height: 4,
@@ -433,7 +433,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 30,
     paddingVertical: 16,
-    backgroundColor: '#4facfe',
+    backgroundColor: '#1DC8CD', // secondary
   },
   buttonIcon: {
     marginRight: 8,

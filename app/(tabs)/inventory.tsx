@@ -9,7 +9,8 @@ import {
 } from '@/store/inventorySlice';
 import { Product } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
-import React, { memo, useCallback, useEffect, useState } from 'react';
+import * as React from 'react';
+import { memo, useCallback, useEffect, useState } from 'react';
 import {
   Alert,
   FlatList,
@@ -40,7 +41,7 @@ const ProductItem = memo(({ item, onPress }: { item: Product; onPress: (product:
           />
         ) : (
           <View style={styles.productImagePlaceholder}>
-            <Ionicons name="cube-outline" size={32} color="#9CA3AF" />
+            <Ionicons name="cube-outline" size={32} color="#959595" />
           </View>
         )}
       </View>
@@ -49,24 +50,24 @@ const ProductItem = memo(({ item, onPress }: { item: Product; onPress: (product:
         <Text style={styles.productName} numberOfLines={2}>{item.name}</Text>
         <View style={styles.productDetails}>
           <View style={styles.productCodeContainer}>
-            <Ionicons name="pricetag-outline" size={14} color="#6B7280" />
+            <Ionicons name="pricetag-outline" size={14} color="#666C78" />
             <Text style={styles.productCode}>{item.default_code || 'N/A'}</Text>
           </View>
           <View style={styles.productQtyContainer}>
-            <Ionicons name="layers-outline" size={14} color="#10B981" />
+            <Ionicons name="layers-outline" size={14} color="#3CD278" />
             <Text style={styles.productQty}>{item.qty_available} {item.uom_name}</Text>
           </View>
         </View>
         {item.barcode && (
           <View style={styles.barcodeContainer}>
-            <Ionicons name="barcode-outline" size={12} color="#9CA3AF" />
+            <Ionicons name="barcode-outline" size={12} color="#959595" />
             <Text style={styles.productBarcode}>{item.barcode}</Text>
           </View>
         )}
       </View>
       
       <View style={styles.addButton}>
-        <Ionicons name="add-circle-outline" size={24} color="#3B82F6" />
+        <Ionicons name="add-circle-outline" size={24} color="#1DC8CD" />
       </View>
     </View>
   </TouchableOpacity>
@@ -184,7 +185,7 @@ export default function InventoryScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerContent}>
-          <Text style={styles.title}>📦 Inventaire</Text>
+          <Text style={styles.title}>📦 Produits</Text>
           <TouchableOpacity
             style={styles.locationButton}
             onPress={() => setShowLocationModal(true)}
@@ -402,16 +403,16 @@ export default function InventoryScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F5F7FA', // grey
   },
   header: {
-    backgroundColor: 'white',
-    paddingTop: 60,
+    backgroundColor: '#F5F7FA', // grey
+    paddingTop: 10,
     paddingHorizontal: 20,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
-    shadowColor: '#000',
+    borderBottomColor: '#E1E1E1', // border
+    shadowColor: '#000510', // darkmode
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
@@ -425,21 +426,21 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: '500',
-    color: '#0F172A',
+    color: '#263238', // midnight_text
   },
   locationButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FEF3E2',
+    backgroundColor: '#FEF3E2', // Kept for now, as it's a specific orange tint
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: '#FEF3E2',
+    borderColor: '#FEF3E2', // Kept for now
   },
   locationText: {
     marginHorizontal: 4,
-    color: '#df401d',
+    color: '#df401d', // Kept for now
     fontSize: 12,
     fontWeight: '600',
   },
@@ -447,33 +448,33 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     paddingHorizontal: 20,
     paddingVertical: 12,
-    backgroundColor: 'white',
+    backgroundColor: '#F5F7FA', // grey
   },
   searchInputContainer: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F5F7FA', // grey
     borderRadius: 10,
     paddingHorizontal: 12,
     marginRight: 10,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#E1E1E1', // border
   },
   searchInput: {
     flex: 1,
     paddingVertical: 10,
     paddingLeft: 6,
     fontSize: 14,
-    color: '#1E293B',
+    color: '#282C36', // deepSlate
   },
   searchButton: {
-    backgroundColor: '#FBBF24',
+    backgroundColor: '#F7931A', // warning
     borderRadius: 10,
     paddingHorizontal: 16,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#FBBF24',
+    shadowColor: '#F7931A', // warning
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
@@ -496,10 +497,10 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '500',
-    color: '#0F172A',
+    color: '#263238', // midnight_text
   },
   productCount: {
-    backgroundColor: '#FBBF24',
+    backgroundColor: '#F7931A', // warning
     borderRadius: 12,
     paddingHorizontal: 10,
     paddingVertical: 3,
@@ -510,7 +511,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   inventoryCount: {
-    backgroundColor: '#10B981',
+    backgroundColor: '#3CD278', // success
     borderRadius: 12,
     paddingHorizontal: 10,
     paddingVertical: 3,
@@ -527,16 +528,16 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
   },
   productCard: {
-    backgroundColor: 'white',
+    backgroundColor: '#F5F7FA', // grey
     borderRadius: 12,
     padding: 12,
-    shadowColor: '#000',
+    shadowColor: '#000510', // darkmode
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 6,
     elevation: 2,
     borderWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: '#F5F7FA', // grey
   },
   productCardContent: {
     flexDirection: 'row',
@@ -549,13 +550,13 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 8,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F5F7FA', // grey
   },
   productImagePlaceholder: {
     width: 48,
     height: 48,
     borderRadius: 8,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#F5F7FA', // grey
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -565,7 +566,7 @@ const styles = StyleSheet.create({
   productName: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#0F172A',
+    color: '#263238', // midnight_text
     marginBottom: 6,
   },
   productDetails: {
@@ -579,7 +580,7 @@ const styles = StyleSheet.create({
   },
   productCode: {
     fontSize: 12,
-    color: '#64748B',
+    color: '#666C78', // charcoalGray
     marginLeft: 3,
   },
   productQtyContainer: {
@@ -588,7 +589,7 @@ const styles = StyleSheet.create({
   },
   productQty: {
     fontSize: 12,
-    color: '#10B981',
+    color: '#3CD278', // success
     fontWeight: '600',
     marginLeft: 3,
   },
@@ -598,7 +599,7 @@ const styles = StyleSheet.create({
   },
   productBarcode: {
     fontSize: 10,
-    color: '#94A3B8',
+    color: '#959595', // dark_border
     fontFamily: 'monospace',
     marginLeft: 3,
   },
@@ -614,33 +615,33 @@ const styles = StyleSheet.create({
   loadingText: {
     marginLeft: 6,
     fontSize: 14,
-    color: '#64748B',
+    color: '#666C78', // charcoalGray
   },
   quickActionsContainer: {
     paddingVertical: 16,
   },
   quickActionCard: {
-    backgroundColor: 'white',
+    backgroundColor: '#F5F7FA', // grey
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
-    shadowColor: '#000',
+    shadowColor: '#000510', // darkmode
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 6,
     elevation: 2,
     borderWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: '#F5F7FA', // grey
   },
   quickActionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#0F172A',
+    color: '#263238', // midnight_text
     marginTop: 6,
   },
   quickActionText: {
     fontSize: 12,
-    color: '#64748B',
+    color: '#666C78', // charcoalGray
     textAlign: 'center',
     marginTop: 3,
   },
@@ -676,9 +677,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   modalContent: {
-    backgroundColor: 'white',
+    backgroundColor: '#F5F7FA', // grey
     borderRadius: 16,
-    padding: 20,
+    padding: 24,
     width: '100%',
     maxWidth: 380,
     maxHeight: '80%',
@@ -690,9 +691,10 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   modalTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#0F172A',
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#263238', // midnight_text
+    marginBottom: 6,
   },
   modalProductContainer: {
     flexDirection: 'row',
@@ -723,7 +725,7 @@ const styles = StyleSheet.create({
   modalProductName: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#0F172A',
+    color: '#263238', // midnight_text
     marginBottom: 6,
   },
   modalProductMeta: {
@@ -731,7 +733,7 @@ const styles = StyleSheet.create({
   },
   modalProductInfo: {
     fontSize: 12,
-    color: '#64748B',
+    color: '#666C78', // charcoalGray
   },
   modalInputContainer: {
     marginBottom: 20,
@@ -739,29 +741,29 @@ const styles = StyleSheet.create({
   modalLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#0F172A',
+    color: '#263238', // midnight_text
     marginBottom: 8,
   },
   modalInputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#E2E8F0',
+    borderColor: '#E1E1E1', // border
     borderRadius: 8,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F5F7FA', // grey
   },
   modalInput: {
     flex: 1,
     paddingHorizontal: 12,
     paddingVertical: 12,
     fontSize: 14,
-    color: '#0F172A',
+    color: '#263238', // midnight_text
     textAlign: 'center',
   },
   modalInputUnit: {
     paddingHorizontal: 12,
     fontSize: 12,
-    color: '#64748B',
+    color: '#666C78', // charcoalGray
     fontWeight: '500',
   },
   modalButtons: {
@@ -770,19 +772,19 @@ const styles = StyleSheet.create({
   },
   modalCancelButton: {
     flex: 1,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#F5F7FA', // grey
     borderRadius: 8,
     paddingVertical: 12,
     alignItems: 'center',
   },
   modalCancelText: {
-    color: '#64748B',
+    color: '#666C78', // charcoalGray
     fontSize: 14,
     fontWeight: '600',
   },
   modalAddButton: {
     flex: 1,
-    backgroundColor: '#3B82F6',
+    backgroundColor: '#1DC8CD', // secondary
     borderRadius: 8,
     paddingVertical: 12,
     flexDirection: 'row',
@@ -791,7 +793,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   modalButtonDisabled: {
-    backgroundColor: '#94A3B8',
+    backgroundColor: '#959595', // dark_border
   },
   modalAddText: {
     color: 'white',
@@ -799,16 +801,16 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   locationItem: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F5F7FA', // grey
     borderRadius: 10,
     padding: 12,
     marginBottom: 6,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#E1E1E1', // border
   },
   selectedLocationItem: {
-    backgroundColor: '#EBF8FF',
-    borderColor: '#3B82F6',
+    backgroundColor: '#EBF8FF', // Kept for selection highlight
+    borderColor: '#1DC8CD', // secondary
   },
   locationItemContent: {
     flexDirection: 'row',
@@ -817,11 +819,11 @@ const styles = StyleSheet.create({
   },
   locationItemText: {
     fontSize: 14,
-    color: '#0F172A',
+    color: '#263238', // midnight_text
     fontWeight: '500',
   },
   selectedLocationText: {
-    color: '#3B82F6',
+    color: '#1DC8CD', // secondary
     fontWeight: '600',
   },
 });

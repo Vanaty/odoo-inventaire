@@ -5,17 +5,17 @@ import { clearError, login } from '@/store/authSlice';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Picker } from '@react-native-picker/picker';
-import { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View
+    Alert,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import Logo from './Logo';
 
@@ -394,11 +394,11 @@ const styles = StyleSheet.create({
     marginBottom: 40,
   },
   logoContainer: {
-    backgroundColor: 'white',
+    backgroundColor: '#F5F7FA', // grey
     padding: 8,
     borderRadius: 24,
     marginBottom: 24,
-    shadowColor: '#000',
+    shadowColor: '#000510', // darkmode
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 12,
@@ -412,19 +412,19 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontWeight: '500',
-    color: '#1F2937',
+    color: '#282C36', // deepSlate
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 18,
-    color: '#6B7280',
+    color: '#666C78', // charcoalGray
     fontWeight: '300',
   },
   form: {
-    backgroundColor: 'white',
+    backgroundColor: '#F5F7FA', // grey
     borderRadius: 16,
     padding: 28,
-    shadowColor: '#000',
+    shadowColor: '#000510', // darkmode
     shadowOffset: {
       width: 0,
       height: 4,
@@ -439,54 +439,54 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: 16,
     fontWeight: '300',
-    color: '#374151',
+    color: '#2F3543', // slateGray
     marginBottom: 8,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#E5E7EB',
+    borderColor: '#E1E1E1', // border
     borderRadius: 12,
     paddingHorizontal: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F5F7FA', // grey
     minHeight: 54,
   },
   inputContainerLoading: {
-    borderColor: '#3B82F6',
+    borderColor: '#1DC8CD', // secondary
   },
   inputContainerError: {
-    borderColor: '#EF4444',
+    borderColor: '#CF3127', // error
   },
   input: {
     flex: 1,
     paddingVertical: 16,
     paddingLeft: 12,
     fontSize: 16,
-    color: '#1F2937',
+    color: '#282C36', // deepSlate
   },
   picker: {
     flex: 1,
     marginLeft: 8,
   },
   errorText: {
-    color: '#EF4444',
+    color: '#CF3127', // error
     fontSize: 14,
     marginTop: 6,
     marginLeft: 4,
   },
   errorContainer: {
-    backgroundColor: '#FEF2F2',
+    backgroundColor: '#FEF2F2', // Kept
     borderRadius: 12,
     padding: 16,
     marginBottom: 20,
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#FECACA',
+    borderColor: '#FECACA', // Kept
   },
   errorContainerText: {
-    color: '#DC2626',
+    color: '#CF3127', // error
     fontSize: 14,
     marginLeft: 8,
     flex: 1,
@@ -495,11 +495,11 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   loginButton: {
-    backgroundColor: '#d8900c',
+    backgroundColor: '#F7931A', // warning
     borderRadius: 12,
     paddingVertical: 18,
     alignItems: 'center',
-    shadowColor: '#d8900c',
+    shadowColor: '#F7931A', // warning
     shadowOffset: {
       width: 0,
       height: 4,
@@ -509,7 +509,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   loginButtonDisabled: {
-    backgroundColor: '#9CA3AF',
+    backgroundColor: '#959595', // dark_border
     shadowOpacity: 0,
     elevation: 0,
   },
@@ -522,13 +522,13 @@ const styles = StyleSheet.create({
   clearButton: {
     backgroundColor: 'transparent',
     borderWidth: 2,
-    borderColor: '#E5E7EB',
+    borderColor: '#E1E1E1', // border
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
   },
   clearButtonText: {
-    color: '#6B7280',
+    color: '#666C78', // charcoalGray
     fontSize: 16,
     fontWeight: '600',
   },

@@ -6,7 +6,8 @@ import { useAppSelector as useSelector } from '@/hooks/useAppSelector';
 import { logout } from '@/store/authSlice';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import React, { useState } from 'react';
+import * as React from 'react';
+import { useState } from 'react';
 import {
   Alert,
   Animated,
@@ -232,7 +233,7 @@ const styles = StyleSheet.create({
   appTitle: {
     fontSize: 32,
     fontWeight: '500',
-    color: '#1E293B',
+    color: '#263238', // midnight_text
     marginBottom: 8,
     textAlign: 'center',
     letterSpacing: 2,
@@ -243,7 +244,7 @@ const styles = StyleSheet.create({
   },
   appSubtitle: {
     fontSize: 17,
-    color: '#64748B',
+    color: '#666C78', // charcoalGray
     textAlign: 'center',
     marginBottom: 40,
     lineHeight: 24,
@@ -255,19 +256,19 @@ const styles = StyleSheet.create({
   featuresTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#1E293B',
+    color: '#263238', // midnight_text
     marginBottom: 20,
     textAlign: 'center',
   },
   loginButton: {
-    backgroundColor: '#d8900c',
+    backgroundColor: '#F7931A', // warning
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 18,
     paddingHorizontal: 40,
     borderRadius: 16,
-    shadowColor: '#d8900c',
+    shadowColor: '#F7931A', // warning
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.25,
     shadowRadius: 12,
@@ -283,7 +284,7 @@ const styles = StyleSheet.create({
   },
   modalContainer: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F5F7FA', // grey
   },
   authenticatedContainer: {
     flex: 1,
@@ -291,11 +292,11 @@ const styles = StyleSheet.create({
   },
   userSection: {
     alignItems: 'center',
-    backgroundColor: 'white',
+    backgroundColor: '#F5F7FA', // grey
     borderRadius: 20,
     padding: 32,
     marginBottom: 24,
-    shadowColor: '#000',
+    shadowColor: '#000510', // darkmode
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
@@ -309,25 +310,25 @@ const styles = StyleSheet.create({
   welcomeText: {
     fontSize: 24,
     fontWeight: '400',
-    color: '#1E293B',
+    color: '#263238', // midnight_text
     marginBottom: 8,
   },
   userInfo: {
     fontSize: 18,
-    color: '#64748B',
+    color: '#666C78', // charcoalGray
     fontWeight: '300',
     marginBottom: 4,
   },
   companyInfo: {
     fontSize: 16,
-    color: '#64748B',
+    color: '#666C78', // charcoalGray
   },
   connectionCard: {
-    backgroundColor: 'white',
+    backgroundColor: '#F5F7FA', // grey
     borderRadius: 16,
     padding: 20,
     marginBottom: 20,
-    shadowColor: '#000',
+    shadowColor: '#000510', // darkmode
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
@@ -336,7 +337,7 @@ const styles = StyleSheet.create({
   connectionTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#1E293B',
+    color: '#263238', // midnight_text
     marginBottom: 16,
   },
   connectionDetails: {
@@ -350,20 +351,20 @@ const styles = StyleSheet.create({
   connectionLabel: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#64748B',
+    color: '#666C78', // charcoalGray
   },
   connectionValue: {
     fontSize: 14,
-    color: '#1E293B',
+    color: '#263238', // midnight_text
     flex: 1,
     textAlign: 'right',
   },
   quickActionsCard: {
-    backgroundColor: 'white',
+    backgroundColor: '#F5F7FA', // grey
     borderRadius: 16,
     padding: 20,
     marginBottom: 20,
-    shadowColor: '#000',
+    shadowColor: '#000510', // darkmode
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
@@ -372,15 +373,15 @@ const styles = StyleSheet.create({
   quickActionsTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#1E293B',
+    color: '#263238', // midnight_text
     marginBottom: 16,
   },
   statsCard: {
-    backgroundColor: 'white',
+    backgroundColor: '#F5F7FA', // grey
     borderRadius: 16,
     padding: 20,
     marginBottom: 20,
-    shadowColor: '#000',
+    shadowColor: '#000510', // darkmode
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
@@ -389,7 +390,7 @@ const styles = StyleSheet.create({
   statsTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#1E293B',
+    color: '#263238', // midnight_text
     marginBottom: 16,
   },
   statsGrid: {
@@ -402,22 +403,22 @@ const styles = StyleSheet.create({
   },
   statLabel: {
     fontSize: 12,
-    color: '#64748B',
+    color: '#666C78', // charcoalGray
     fontWeight: '500',
   },
   logoutButton: {
-    backgroundColor: 'white',
+    backgroundColor: '#F5F7FA', // grey
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 16,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: '#FECACA',
+    borderColor: '#CF3127', // error
     gap: 8,
   },
   logoutButtonText: {
-    color: '#DC2626',
+    color: '#CF3127', // error
     fontSize: 16,
     fontWeight: '600',
   },

@@ -29,7 +29,7 @@ export default function AuthRequired({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F5F7FA', // grey
   },
   content: {
     flex: 1,
@@ -38,7 +38,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 48,
   },
   iconContainer: {
-    backgroundColor: '#df401d',
+    backgroundColor: '#F7931A', // warning
     borderRadius: 40,
     padding: 32,
     marginBottom: 32,
@@ -46,13 +46,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: '500',
-    color: '#0F172A',
+    color: '#263238', // midnight_text
     marginBottom: 16,
     textAlign: 'center',
   },
   message: {
     fontSize: 18,
-    color: '#64748B',
+    color: '#666C78', // charcoalGray
     textAlign: 'center',
     lineHeight: 28,
     maxWidth: 320,

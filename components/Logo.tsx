@@ -34,10 +34,10 @@ export default function Logo({ size = 'medium', variant = 'default', style }: Lo
 
 const styles = StyleSheet.create({
   defaultContainer: {
-    backgroundColor: 'white',
+    backgroundColor: '#F5F7FA', // grey
     padding: 8,
     borderRadius: 24,
-    shadowColor: '#000',
+    shadowColor: '#000510', // darkmode
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 12,
@@ -48,6 +48,6 @@ const styles = StyleSheet.create({
     padding: 0,
   },
   logo: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F5F7FA', // grey
   },
 });

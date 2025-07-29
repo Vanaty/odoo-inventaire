@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
-import React from 'react';
+import * as React from 'react';
 
 export default function TabLayout() {
   return (
@@ -31,7 +31,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="inventory"
         options={{
-          title: 'Inventaire',
+          title: 'Produits',
           tabBarIcon: ({ size, color }) => (
             <Ionicons name="cube-outline" size={size} color={color} />
           ),
@@ -40,7 +40,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="scan"
         options={{
-          title: 'Scanner',
+          title: 'Inventaire',
           tabBarIcon: ({ size, color }) => (
             <Ionicons name="scan-outline" size={size} color={color} />
           ),

@@ -94,6 +94,18 @@ export const validateInventoryLines = createAsyncThunk(
   }
 );
 
+export const validateAllInventory = createAsyncThunk(
+  'inventory/validateAllInventory',
+  async ({ name, lineIds }: { name: string, lineIds: number[] }, { rejectWithValue }) => {
+    try {
+      await odooService.validateAllInventory(name, lineIds);
+      return lineIds;
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Erreur de validation de l\'inventaire');
+    }
+  }
+);
+
 export const deleteInventoryLine = createAsyncThunk(
   'inventory/deleteInventoryLine',
   async (lineId: number, { rejectWithValue }) => {
@@ -210,6 +222,20 @@ const inventorySlice = createSlice({
         );
       })
       .addCase(validateInventoryLines.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      })
+      // Validate all inventory
+      .addCase(validateAllInventory.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(validateAllInventory.fulfilled, (state, action) => {
+        state.loading = false;
+        // Clear inventory lines after validation
+        state.inventoryLines = [];
+      })
+      .addCase(validateAllInventory.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
       })

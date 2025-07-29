@@ -33,13 +33,14 @@ RUN npm install --global yarn eas-cli
 RUN mkdir -p $ANDROID_SDK_ROOT/cmdline-tools && \
     wget -q https://dl.google.com/android/repository/commandlinetools-linux-${ANDROID_SDK_TOOLS}_latest.zip -O /tmp/sdk-tools.zip && \
     unzip -q /tmp/sdk-tools.zip -d /tmp/sdk && \
+    rm -rf $ANDROID_SDK_ROOT/cmdline-tools/latest && \
     mv /tmp/sdk/cmdline-tools $ANDROID_SDK_ROOT/cmdline-tools/latest && \
     rm -rf /tmp/sdk-tools.zip /tmp/sdk && \
-    yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_SDK_ROOT \
+    yes | $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --licenses && \
+    $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --sdk_root=$ANDROID_SDK_ROOT \
         "platform-tools" \
         "platforms;android-${ANDROID_COMPILE_SDK}" \
-        "build-tools;${ANDROID_BUILD_TOOLS}" \
-        "cmdline-tools;latest"
+        "build-tools;${ANDROID_BUILD_TOOLS}"
 
 # Verify installations
 RUN node -v && npm -v && java -version

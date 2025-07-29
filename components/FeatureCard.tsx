@@ -21,7 +21,7 @@ export default function FeatureCard({ icon, iconColor, title, description, onPre
         <Text style={styles.featureDescription}>{description}</Text>
       </View>
       {onPress && (
-        <Ionicons name="arrow-forward" size={20} color="#9CA3AF" />
+        <Ionicons name="arrow-forward" size={20} color="#959595" />
       )}
     </CardComponent>
   );
@@ -31,11 +31,11 @@ const styles = StyleSheet.create({
   featureCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'white',
+    backgroundColor: '#F5F7FA', // grey
     borderRadius: 16,
     padding: 20,
     marginBottom: 12,
-    shadowColor: '#000',
+    shadowColor: '#000510', // darkmode
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
@@ -48,12 +48,12 @@ const styles = StyleSheet.create({
   featureTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#1E293B',
+    color: '#263238', // midnight_text
     marginBottom: 4,
   },
   featureDescription: {
     fontSize: 14,
-    color: '#64748B',
+    color: '#666C78', // charcoalGray
     lineHeight: 20,
   },
 });

@@ -135,6 +135,10 @@ class OdooService {
     const data = await response.json();
 
     if (data.error) {
+      if (data.error.data && data.error.data.message && data.error.data.message.includes('Session expired')) {
+        await this.clearSession();
+        throw new Error('Session expired, please log in again');
+      }
       throw new Error(JSON.stringify(data) || 'Erreur JSON-RPC');
     }
 
@@ -228,7 +232,7 @@ class OdooService {
     }
 
     // Handle array responses for database list
-    const arrayMatch = xmlText.match(/<array><data>(.*?)<\/data><\/array>/s);
+    const arrayMatch = xmlText.match(/<array><data>(.*?)<\/data><\/array>/);
     if (arrayMatch) {
       const valueMatches = arrayMatch[1].match(/<value><string>(.*?)<\/string><\/value>/g);
       if (valueMatches && valueMatches.length > 0) {
@@ -368,7 +372,7 @@ class OdooService {
       const quants = await this.jsonRpcCall('/web/dataset/call_kw', {
         model: 'stock.quant',
         method: 'read',
-        args: [quantIds, ['product_id', 'quantity', 'inventory_quantity', 'location_id']],
+        args: [quantIds, ['product_id', 'quantity', 'inventory_diff_quantity','inventory_quantity', 'location_id']],
         kwargs: {}
       });
 
@@ -396,6 +400,7 @@ class OdooService {
         const product = products.find((p: any) => p.id === quant.product_id[0]);
         const productQty = quant.inventory_quantity || 0;
         const theoreticalQty = quant.quantity || 0;
+        const diffQty = quant.inventory_diff_quantity || 0;
         
         return {
           id: quant.id,
@@ -404,7 +409,7 @@ class OdooService {
           product_barcode: product?.barcode || '',
           product_qty: productQty,
           theoretical_qty: theoreticalQty,
-          difference_qty: productQty - theoreticalQty,
+          difference_qty: diffQty,
           location_id: locationId,
           location_name: locationName
         };
@@ -420,7 +425,7 @@ class OdooService {
       const quantUpdates: any = {};
       
       if (updates.product_qty !== undefined) {
-        quantUpdates.quantity = updates.product_qty;
+        quantUpdates.quantity = updates.theoretical_qty;
         quantUpdates.inventory_quantity = updates.product_qty;
       }
 
@@ -453,19 +458,85 @@ class OdooService {
     }
   }
 
+  async fixInventoryConflict(IDsQuant: number[]): Promise<void> {
+    try {
+      if (IDsQuant.length === 0) return;
+      const data = await this.jsonRpcCall('/web/dataset/call_kw', {
+        model: 'stock.quant',
+        method: 'read',
+        args: [IDsQuant,["inventory_quantity","quantity","inventory_diff_quantity"]],
+        kwargs: {}
+      });
+      data.forEach((quant: any) => {
+        this.updateInventoryLine(quant.id, {
+          product_qty: quant.quantity + quant.inventory_diff_quantity,
+          theoretical_qty: quant.quantity
+        })
+      });
+    } catch (error) {
+      console.error('Error fixing inventory conflicts:', error);
+      throw error;
+    }
+  }
+
   async validerInventoryLine(IDs : number[]): Promise<void> {
     try {
       if (IDs.length === 0) return;
 
       // Call the Odoo method to validate inventory lines
-      await this.jsonRpcCall('/web/dataset/call_kw', {
+      const data = await this.jsonRpcCall('/web/dataset/call_kw', {
         model: 'stock.quant',
         method: 'action_apply_inventory',
         args: [IDs],
         kwargs: {}
       });
+      if (data && typeof data === 'object' && data.res_model === 'stock.inventory.conflict') {
+        const context = data.context || {};
+        if (context.default_quant_to_fix_ids && context.default_quant_to_fix_ids.length > 0) {
+          await this.fixInventoryConflict(context.default_quant_to_fix_ids);
+        }
+        return await this.validerInventoryLine(IDs);
+      }
     } catch (error) {
       console.error('Error validating inventory lines:', error);
+      throw error;
+    }
+  }
+
+  async createInventoryName(name: string, quant_ids: number[]): Promise<number> {
+    try {
+      const inventoryId = await this.jsonRpcCall('/web/dataset/call_kw', {
+        model: 'stock.inventory.adjustment.name',
+        method: 'create',
+        args: [{
+          inventory_adjustment_name: name,
+          show_info: true,
+          quant_ids: quant_ids,
+        }],
+        kwargs: {}
+      });
+      return inventoryId;
+    } catch (error) {
+      console.error('Error creating inventory name:', error);
+      throw error;
+    }
+  }
+
+  async validateAllInventory(name: string, quant_ids: number[]): Promise<void> {
+    try {
+      const inventoryId = await this.createInventoryName(name, quant_ids);
+      if (inventoryId) {
+        const response = await this.jsonRpcCall('/web/dataset/call_kw', {
+          model: 'stock.inventory.adjustment.name',
+          method: 'action_apply',
+          args: [inventoryId],
+          kwargs: {}
+        });
+      } else {
+        throw new Error('Failed to create inventory name');
+      }
+    } catch (error) {
+      console.error('Error validating all inventory:', error);
       throw error;
     }
   }

@@ -7,11 +7,13 @@ import {
   deleteInventoryLine,
   loadInventoryLines,
   searchProductByBarcode,
+  validateAllInventory,
   validateInventoryLines
 } from '@/store/inventorySlice';
 import { InventoryLine, Product } from '@/types';
 import { Ionicons } from '@expo/vector-icons';
-import React, { useCallback, useEffect, useState } from 'react';
+import * as React from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
   FlatList,
@@ -29,6 +31,8 @@ export default function ScanScreen() {
   const [quantity, setQuantity] = useState('');
   const [showQuantityModal, setShowQuantityModal] = useState(false);
   const [lastScannedCode, setLastScannedCode] = useState('');
+  const [showAdjustmentNameModal, setShowAdjustmentNameModal] = useState(false);
+  const [adjustmentName, setAdjustmentName] = useState('');
 
   const dispatch = useAppDispatch();
   const { loading, error, currentLocation, inventoryLines } = useSelector(state => state.inventory);
@@ -113,27 +117,23 @@ export default function ScanScreen() {
       Alert.alert('Aucune ligne', 'Il n\'y a aucune ligne d\'inventaire à valider');
       return;
     }
+    setShowAdjustmentNameModal(true);
+  };
 
-    Alert.alert(
-      'Valider tout l\'inventaire',
-      `Êtes-vous sûr de vouloir valider toutes les ${inventoryLines.length} lignes d'inventaire ?`,
-      [
-        { text: 'Annuler', style: 'cancel' },
-        { 
-          text: 'Valider tout', 
-          style: 'default',
-          onPress: async () => {
-            try {
-              const lineIds = inventoryLines.map(line => line.id!).filter(id => id);
-              await dispatch(validateInventoryLines(lineIds)).unwrap();
-              Alert.alert('Succès', 'Toutes les lignes d\'inventaire ont été validées');
-            } catch (error) {
-              Alert.alert('Erreur', error as string);
-            }
-          }
-        },
-      ]
-    );
+  const handleConfirmValidateAll = async () => {
+    if (!adjustmentName.trim()) {
+      Alert.alert('Erreur', 'Veuillez saisir un nom pour l\'ajustement.');
+      return;
+    }
+    try {
+      const lineIds = inventoryLines.map(line => line.id!).filter(id => id);
+      await dispatch(validateAllInventory({ name: adjustmentName, lineIds })).unwrap();
+      Alert.alert('Succès', 'Toutes les lignes d\'inventaire ont été validées');
+      setShowAdjustmentNameModal(false);
+      setAdjustmentName('');
+    } catch (error) {
+      Alert.alert('Erreur', error as string);
+    }
   };
 
   const handleValidateLine = async (lineId: number, productName: string) => {
@@ -220,7 +220,7 @@ export default function ScanScreen() {
             <Text style={styles.quantityValue}>{item.theoretical_qty}</Text>
           </View>
           <View style={styles.quantityArrow}>
-            <Ionicons name="arrow-forward" size={20} color="#CBD5E1" />
+            <Ionicons name="arrow-forward" size={20} color="#D8DBDB" />
           </View>
           <View style={styles.quantityItem}>
             <Text style={styles.quantityLabel}>Compté</Text>
@@ -240,13 +240,13 @@ export default function ScanScreen() {
                   item.difference_qty > 0 ? "trending-up" : "trending-down"} 
             size={18} 
             color={item.difference_qty === 0 ? '#0EA5E9' :
-                   item.difference_qty > 0 ? '#10B981' : '#EF4444'} 
+                   item.difference_qty > 0 ? '#3CD278' : '#CF3127'} // success, error
           />
           <Text style={[
             styles.differenceText,
             { 
               color: item.difference_qty === 0 ? '#0EA5E9' :
-                     item.difference_qty > 0 ? '#10B981' : '#EF4444' 
+                     item.difference_qty > 0 ? '#3CD278' : '#CF3127' // success, error
             }
           ]}>
             {item.difference_qty === 0 ? 'Conforme' : 
@@ -274,7 +274,7 @@ export default function ScanScreen() {
           <Ionicons name="location-outline" size={64} color="#9CA3AF" />
           <Text style={styles.emptyStateTitle}>Emplacement requis</Text>
           <Text style={styles.notAuthenticatedText}>
-            Veuillez sélectionner un emplacement dans l'onglet Inventaire
+            Veuillez sélectionner un emplacement dans l'onglet Produit
           </Text>
         </View>
       </View>
@@ -286,7 +286,7 @@ export default function ScanScreen() {
       <View style={styles.header}>
         <View style={styles.headerContent}>
           <View style={styles.headerInfo}>
-            <Text style={styles.title}>Scanner</Text>
+            <Text style={styles.title}>Inventaire</Text>
             <View style={styles.locationBadge}>
               <Ionicons name="location" size={14} color="#df9e1d" />
               <Text style={styles.subtitle}>{currentLocation.name}</Text>
@@ -321,7 +321,7 @@ export default function ScanScreen() {
               <Text style={styles.sectionTitle}>Lignes d'inventaire</Text>
             </View>
             <View style={styles.headerActions}>
-              {inventoryLines.length > 0 && (
+              {inventoryLines.length > 0 ? (
                 <TouchableOpacity
                   style={styles.validateAllButton}
                   onPress={handleValidateAll}
@@ -329,9 +329,24 @@ export default function ScanScreen() {
                   <Ionicons name="checkmark-done" size={16} color="white" />
                   <Text style={styles.validateAllText}>Valider tout</Text>
                 </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  style={styles.refreshButton}
+                  onPress={() => dispatch(loadInventoryLines(currentLocation.id))}
+                >
+                  <Ionicons name="refresh" size={16} color="#df9e1d" />
+                  <Text style={styles.refreshText}>Rafraîchir</Text>
+                </TouchableOpacity>
               )}
             </View>
           </View>
+
+          {loading && (
+            <View style={styles.loadingContainer}>
+              <Ionicons name="refresh" size={24} color="#3B82F6" />
+              <Text style={styles.loadingText}>Chargement des produits...</Text>
+            </View>
+          )}
           
           {inventoryLines.length === 0 ? (
             <View style={styles.emptyInventory}>
@@ -348,6 +363,8 @@ export default function ScanScreen() {
               keyExtractor={item => item.id?.toString() || Math.random().toString()}
               style={styles.inventoryList}
               showsVerticalScrollIndicator={false}
+              refreshing={loading}
+              onRefresh={() => dispatch(loadInventoryLines(currentLocation.id))}
               contentContainerStyle={styles.inventoryListContent}
               ItemSeparatorComponent={() => <View style={styles.itemSeparator} />}
             />
@@ -440,6 +457,50 @@ export default function ScanScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Adjustment Name Modal */}
+      <Modal
+        visible={showAdjustmentNameModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowAdjustmentNameModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalIcon}>
+              <Ionicons name="document-text-outline" size={56} color="#F7931A" />
+            </View>
+            <Text style={styles.modalTitle}>Valider l'inventaire</Text>
+            
+            <View style={styles.modalInputContainer}>
+              <Text style={styles.modalLabel}>Nom de l'ajustement d'inventaire</Text>
+              <TextInput
+                style={styles.modalInput}
+                value={adjustmentName}
+                onChangeText={setAdjustmentName}
+                placeholder="Ex: Inventaire Annuel Zone A"
+                autoFocus
+              />
+            </View>
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.modalCancelButton}
+                onPress={() => setShowAdjustmentNameModal(false)}
+              >
+                <Text style={styles.modalCancelText}>Annuler</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalAddButton, !adjustmentName.trim() && styles.modalAddButtonDisabled]}
+                onPress={handleConfirmValidateAll}
+                disabled={!adjustmentName.trim()}
+              >
+                <Text style={styles.modalAddText}>Valider tout</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -450,13 +511,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
   },
   header: {
-    backgroundColor: 'white',
-    paddingTop: 60,
+    backgroundColor: '#F5F7FA', // grey
+    paddingTop: 10,
     paddingHorizontal: 20,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
-    shadowColor: '#000',
+    borderBottomColor: '#E1E1E1', // border
+    shadowColor: '#000510', // darkmode
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
@@ -473,13 +534,13 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: '500',
-    color: '#0F172A',
+    color: '#263238', // midnight_text
     marginBottom: 6,
   },
   locationBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FEF3E2',
+    backgroundColor: '#FEF3E2', // Kept
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 16,
@@ -487,7 +548,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 12,
-    color: '#df401d',
+    color: '#df9e1d', // Kept
     fontWeight: '600',
     marginLeft: 4,
   },
@@ -496,23 +557,23 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   statCard: {
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F5F7FA', // grey
     borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 8,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#E1E1E1', // border
     minWidth: 60,
   },
   statNumber: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#0F172A',
+    color: '#263238', // midnight_text
   },
   statLabel: {
     fontSize: 10,
-    color: '#64748B',
+    color: '#666C78', // charcoalGray
     fontWeight: '600',
     marginTop: 2,
   },
@@ -524,20 +585,20 @@ const styles = StyleSheet.create({
   lastScanContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'white',
+    backgroundColor: '#F5F7FA', // grey
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    shadowColor: '#000',
+    borderColor: '#E1E1E1', // border
+    shadowColor: '#000510', // darkmode
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 2,
   },
   successIcon: {
-    backgroundColor: '#F0FDF4',
+    backgroundColor: '#F0FDF4', // Kept
     borderRadius: 16,
     padding: 8,
   },
@@ -547,13 +608,13 @@ const styles = StyleSheet.create({
   },
   lastScanLabel: {
     fontSize: 12,
-    color: '#64748B',
+    color: '#666C78', // charcoalGray
     fontWeight: '600',
     marginBottom: 2,
   },
   lastScanCode: {
     fontSize: 14,
-    color: '#0F172A',
+    color: '#263238', // midnight_text
     fontWeight: '600',
     fontFamily: 'monospace',
   },
@@ -573,7 +634,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '500',
-    color: '#0F172A',
+    color: '#263238', // midnight_text
     marginLeft: 8,
   },
   inventoryList: {
@@ -583,16 +644,16 @@ const styles = StyleSheet.create({
     paddingBottom: 100, // Space for floating button
   },
   inventoryCard: {
-    backgroundColor: 'white',
+    backgroundColor: '#F5F7FA', // grey
     borderRadius: 16,
     padding: 20,
-    shadowColor: '#000',
+    shadowColor: '#000510', // darkmode
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
     elevation: 2,
     borderWidth: 1,
-    borderColor: '#F1F5F9',
+    borderColor: '#F5F7FA', // grey
   },
   inventoryHeader: {
     flexDirection: 'row',
@@ -607,7 +668,7 @@ const styles = StyleSheet.create({
   inventoryProductName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#0F172A',
+    color: '#263238', // midnight_text
     marginBottom: 8,
     lineHeight: 20,
   },
@@ -620,15 +681,27 @@ const styles = StyleSheet.create({
   },
   inventoryLocation: {
     fontSize: 12,
-    color: '#64748B',
+    color: '#666C78', // charcoalGray
     marginLeft: 4,
     fontWeight: '500',
   },
   inventoryBarcode: {
     fontSize: 11,
-    color: '#94A3B8',
+    color: '#959595', // dark_border
     fontFamily: 'monospace',
     marginLeft: 4,
+  },
+
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+  },
+  loadingText: {
+    marginLeft: 6,
+    fontSize: 14,
+    color: '#666C78', // charcoalGray
   },
   actionButtons: {
     flexDirection: 'row',
@@ -637,16 +710,16 @@ const styles = StyleSheet.create({
   validateButton: {
     padding: 8,
     borderRadius: 8,
-    backgroundColor: '#F0FDF4',
+    backgroundColor: '#F0FDF4', // Kept
     borderWidth: 1,
-    borderColor: '#BBF7D0',
+    borderColor: '#BBF7D0', // Kept
   },
   removeButton: {
     padding: 8,
     borderRadius: 8,
-    backgroundColor: '#FEF2F2',
+    backgroundColor: '#FEF2F2', // Kept
     borderWidth: 1,
-    borderColor: '#FECACA',
+    borderColor: '#FECACA', // Kept
   },
   inventoryContent: {
     gap: 16,
@@ -660,14 +733,14 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     padding: 16,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F5F7FA', // grey
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#E1E1E1', // border
   },
   quantityLabel: {
     fontSize: 12,
-    color: '#64748B',
+    color: '#666C78', // charcoalGray
     marginBottom: 6,
     fontWeight: '600',
     textTransform: 'uppercase',
@@ -676,95 +749,27 @@ const styles = StyleSheet.create({
   quantityValue: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#0F172A',
+    color: '#263238', // midnight_text
   },
   quantityArrow: {
-    paddingHorizontal: 12,
+    paddingHorizontal: 8,
   },
   differenceContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.05)',
+    paddingVertical: 8,
+    borderRadius: 8,
+    marginTop: 12,
   },
   differenceText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
     marginLeft: 6,
   },
-  itemSeparator: {
-    height: 16,
-  },
-  centerContent: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 48,
-  },
-  emptyStateTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#0F172A',
-    marginTop: 16,
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  notAuthenticatedText: {
-    fontSize: 16,
-    color: '#64748B',
-    textAlign: 'center',
-    lineHeight: 24,
-  },
-  emptyInventory: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 48,
-  },
-  emptyIcon: {
-    backgroundColor: '#F8FAFC',
-    borderRadius: 24,
-    padding: 20,
-    marginBottom: 12,
-  },
-  emptyText: {
-    fontSize: 16,
-    color: '#64748B',
-    fontWeight: '600',
-    marginBottom: 6,
-  },
-  emptySubtext: {
-    fontSize: 14,
-    color: '#94A3B8',
-  },
-  floatingButton: {
-    position: 'absolute',
-    bottom: 24,
-    right: 24,
-    backgroundColor: '#df9e1d',
-    borderRadius: 28,
-    width: 56,
-    height: 56,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#df9e1d',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 8,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-  },
   modalContent: {
-    backgroundColor: 'white',
-    borderRadius: 20,
+    backgroundColor: '#F5F7FA', // grey
+    borderRadius: 16,
     padding: 24,
     width: '100%',
     maxWidth: 400,
@@ -790,12 +795,12 @@ const styles = StyleSheet.create({
     width: '100%',
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#E1E1E1', // border
   },
   modalProductName: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#0F172A',
+    color: '#263238', // midnight_text
     marginBottom: 12,
     textAlign: 'center',
   },
@@ -809,12 +814,12 @@ const styles = StyleSheet.create({
   },
   productDetailLabel: {
     fontSize: 12,
-    color: '#64748B',
+    color: '#666C78', // charcoalGray
     fontWeight: '600',
   },
   productDetailValue: {
     fontSize: 12,
-    color: '#0F172A',
+    color: '#263238', // midnight_text
     fontWeight: '600',
   },
   modalInputContainer: {
@@ -824,20 +829,20 @@ const styles = StyleSheet.create({
   modalLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#0F172A',
+    color: '#263238', // midnight_text
     marginBottom: 8,
   },
   modalInput: {
     borderWidth: 2,
-    borderColor: '#FDE68A',
+    borderColor: '#F7931A', // warning
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 12,
     fontSize: 16,
-    color: '#0F172A',
+    color: '#263238', // midnight_text
     textAlign: 'center',
     fontWeight: '600',
-    backgroundColor: '#FFFBEB',
+    backgroundColor: '#FFFBEB', // Kept
   },
   modalButtons: {
     flexDirection: 'row',
@@ -846,27 +851,27 @@ const styles = StyleSheet.create({
   },
   modalCancelButton: {
     flex: 1,
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#F5F7FA', // grey
     borderRadius: 8,
     paddingVertical: 12,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderColor: '#E1E1E1', // border
   },
   modalCancelText: {
-    color: '#64748B',
+    color: '#666C78', // charcoalGray
     fontSize: 14,
     fontWeight: '600',
   },
   modalAddButton: {
     flex: 2,
-    backgroundColor: '#df401d',
+    backgroundColor: '#F7931A', // warning
     borderRadius: 8,
     paddingVertical: 12,
     alignItems: 'center',
   },
   modalAddButtonDisabled: {
-    backgroundColor: '#CBD5E1',
+    backgroundColor: '#D8DBDB', // muted
   },
   modalAddText: {
     color: 'white',
@@ -879,14 +884,14 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   validateAllButton: {
-    backgroundColor: '#FBBF24',
+    backgroundColor: '#F7931A', // warning
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 8,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    shadowColor: '#FBBF24',
+    shadowColor: '#F7931A', // warning
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
@@ -896,5 +901,89 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 12,
     fontWeight: '600',
+  },
+  emptyInventory: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+    marginTop: 40,
+  },
+  emptyIcon: {
+    backgroundColor: '#F1F5F9',
+    padding: 20,
+    borderRadius: 999,
+    marginBottom: 16,
+  },
+  emptyText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#475569',
+    marginBottom: 4,
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: '#94A3B8',
+    textAlign: 'center',
+  },
+  centerContent: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  emptyStateTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#1E293B',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  notAuthenticatedText: {
+    fontSize: 14,
+    color: '#64748B',
+    textAlign: 'center',
+  },
+  itemSeparator: {
+    height: 12,
+  },
+  floatingButton: {
+    position: 'absolute',
+    bottom: 30,
+    right: 20,
+    backgroundColor: '#F7931A',
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 8,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  refreshButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F5F7FA', // grey
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: '#E1E1E1', // border
+  },
+  refreshText: {
+    color: '#F7931A', // warning
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 6,
   },
 });

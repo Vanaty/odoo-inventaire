@@ -5,8 +5,10 @@ import * as Font from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import * as React from 'react';
+import { useEffect, useState } from 'react';
+import { StyleSheet, Text } from 'react-native';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { Provider } from 'react-redux';
 
 // Keep the splash screen visible while we fetch resources
@@ -50,24 +52,34 @@ export default function RootLayout() {
 
   if (!fontsLoaded || !sessionRestored) {
     return (
-      <View style={styles.loadingContainer}>
-        <Text style={styles.loadingText}>Chargement...</Text>
-      </View>
+      <SafeAreaProvider>
+        <SafeAreaView style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Chargement...</Text>
+        </SafeAreaView>
+      </SafeAreaProvider>
     );
   }
 
   return (
-    <Provider store={store}>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="+not-found" />
-      </Stack>
-      <StatusBar style="auto" />
-    </Provider>
+    <SafeAreaProvider>
+      <Provider store={store}>
+        <SafeAreaView style={styles.container}>
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="+not-found" />
+          </Stack>
+          <StatusBar style="auto" />
+        </SafeAreaView>
+      </Provider>
+    </SafeAreaProvider>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#F8FAFC',
+  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
