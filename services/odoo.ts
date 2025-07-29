@@ -129,6 +129,7 @@ class OdooService {
       clearTimeout(id);
     } catch (error) {
       console.error('Network error:', error);
+      clearTimeout(id);
       throw new Error('Network error, please check your connection or Odoo server status');
     }
 

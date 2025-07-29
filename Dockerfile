@@ -46,3 +46,8 @@ RUN mkdir -p $ANDROID_SDK_ROOT/cmdline-tools && \
 RUN node -v && npm -v && java -version
 
 WORKDIR /app
+
+# Exemple d'utilisation
+# docker run -it --rm -v $(pwd):/app your-image-name bash
+# This Dockerfile sets up an environment for Android development with Node.js and EAS CLI.
+# You can build and run your Android applications using this image.
